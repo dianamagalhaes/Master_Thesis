@@ -3,6 +3,8 @@ import importlib
 import sys
 import os
 import json
+from xml.parsers.expat import model
+from sklearn.metrics import log_loss
 import torch
 from torchvision import transforms, datasets
 import pickle
@@ -67,6 +69,7 @@ def run_model_train(args):
 
     model = torch_model.Network(inpt_dims)
     optim, scheduler = torch_model.get_optimizer(model)
+    print(model)
 
     model_operator = ModelOperator(torch_model.loss, optim, use_cuda=args.gpu)
 
@@ -75,8 +78,6 @@ def run_model_train(args):
     trainer_operator = Trainer(model_operator, logger, epochs=json_confs["train"]["epochs"])
     trainer_operator.run_epochs(model, train_loader, val_loader, scheduler)
 
-    model_scripted = torch.jit.script(model) # Export to TorchScript
-    model_scripted.save('model_scripted.pt') # Save
     
 def run_model_eval(args):
 
