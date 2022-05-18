@@ -44,6 +44,7 @@ class ataque:
         for var_name in optimizer.state_dict():
             print(var_name, "\t", optimizer.state_dict()[var_name])
 
-
+        def data_load(original, ataque)
+        #To be developed
 ataque.load_model(model,path)
 
