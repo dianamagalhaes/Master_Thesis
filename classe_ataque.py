@@ -48,6 +48,7 @@ class ataque:
         
     
 
-
+        def data_load(original, ataque)
+        #To be developed
 ataque.load_model(model,path)
 ataque.load_data_from_clean_model(model)
