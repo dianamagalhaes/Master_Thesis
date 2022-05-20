@@ -1,4 +1,6 @@
+from cgi import test
 from collections import OrderedDict
+from email.errors import NonASCIILocalPartDefect
 import json
 from pickletools import optimize
 import torch
@@ -8,10 +10,15 @@ import importlib
 import sys
 import torch.optim as optim
 from yaml import load
+from torch_ava.data import gen_dataset_loader
+
+import numpy as np
 
 path= 'models/Demo/LOGS/models/nnet_epoch_9.pt'
 model={}
-
+train=None
+train_dl=None
+test_dl=None
 class ataque: 
     def __init__(self, model, path):
         self.model= model
@@ -33,17 +40,14 @@ class ataque:
         print("Epoch successfully load!")
         #print(model)
         
-        #Model State after load
-        print("Model's state_dict:")
-        for param_tensor in model.state_dict():
-            print(param_tensor, "\t", model.state_dict()[param_tensor].size())
-        optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+       
+    def load_data_from_clean_model(model, BATCH_SIZE=128):
+        x = gen_dataset_loader.LoaderOperator(torch_dset=path)
+        train_dl= x.get_loader(mode=train, torch_dset=path, batch_size=50)
+        test_dl= x.get_loader(mode=test, torch_dset=path, batch_size=50)
         
-        # Print optimizer's state_dict
-        print("Optimizer's state_dict:")
-        for var_name in optimizer.state_dict():
-            print(var_name, "\t", optimizer.state_dict()[var_name])
+    
 
 
 ataque.load_model(model,path)
-
+ataque.load_data_from_clean_model(model)
