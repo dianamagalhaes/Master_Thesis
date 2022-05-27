@@ -1,7 +1,7 @@
 {
     "train": {
         "batch_size": 16,
-        "epochs": 10,
+        "epochs": 2,
         "transformations": {
             "RandomHorizontalFlip": {
                 "p": 0.5

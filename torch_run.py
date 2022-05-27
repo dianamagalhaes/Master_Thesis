@@ -66,7 +66,8 @@ def run_model_train(args):
 
     ch, w, h = train_data[0][0].shape
     inpt_dims = [train_loader.batch_size, ch, w, h]
-
+    print(inpt_dims)
+    exit()
     model = torch_model.Network(inpt_dims)
     optim, scheduler = torch_model.get_optimizer(model)
     print(model)
@@ -74,6 +75,8 @@ def run_model_train(args):
     model_operator = ModelOperator(torch_model.loss, optim, use_cuda=args.gpu)
 
     logger = TensorboardLoggerOperator(model_dir, labels_index=mednist_data.class_to_idx)
+    print(logger.tb_logger)
+    print(type(logger.tb_logger))
 
     trainer_operator = Trainer(model_operator, logger, epochs=json_confs["train"]["epochs"])
     trainer_operator.run_epochs(model, train_loader, val_loader, scheduler)
