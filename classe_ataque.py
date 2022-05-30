@@ -19,8 +19,19 @@ from torch_ava.engine import evaluator
 from torchvision import datasets
 from torch_ava.data import MedNISTDataset
 from torch_ava.data.gen_dataset_loader import LoaderOperator
+from torch_ava.engine.evaluator import Evaluator
+from torch_ava.torch_utils.operators import ModelOperator
+from models.Demo.torch_model import Network
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+from typing import Union
+from cleverhans.utils import AccuracyReport
+from torch.autograd import Variable
+import torch.nn.functional as F
+from cleverhans.utils_pytorch import convert_pytorch_model_to_tf
+from cleverhans.model import CallableModelWrapper
+import tensorflow as tf
+from cleverhans.attacks import FastGradientMethod
 
 def get_configs():
 
@@ -29,29 +40,6 @@ def get_configs():
     with open(json_file_path) as f:
         json_confs = json.load(f)
         return json_confs
-
-def load_data_from_dataset(path_dataset="./MedNIST/"):
-    json_confs=get_configs()
-    train_data_aug = DataAugOperator()
-    
-
-    train_data_aug.set_pipeline(json_confs["train"]["transformations"])
-
-    val_data_aug = DataAugOperator()
-    val_data_aug.set_pipeline(json_confs["val"]["transformations"])
-
-    mednist_data = datasets.ImageFolder(root="./MedNIST/")
-    train_data = MedNISTDataset(mednist_data, train_data_aug.get_pipeline())
-    val_data = MedNISTDataset(mednist_data, val_data_aug.get_pipeline())
-
-    data_loader = LoaderOperator(train_data)
-    train_loader = data_loader.get_loader("train", train_data, json_confs["train"]["batch_size"])
-    val_loader = data_loader.get_loader("val", val_data, json_confs["val"]["batch_size"])
-    return val_loader
-
-
-
-
 
 class Ataque: 
     def __init__(self, model, path):
@@ -70,32 +58,113 @@ class Ataque:
         
         #Loading the Epoch correctly
         model=torch.load(path)
-        #print(model.state_dict())
-        data_load= load_data_from_dataset()
-        print(data_load)
-        print("Epoch successfully load!")
-        print(model)
-        model= model.eval()
-        print(132)
-        print(len(next(iter(data_load))[0][0][0][0]))
-        print(234)
-        trainfeature, trainlabel = next(iter(data_load))
-        print(trainfeature, trainlabel)
-        imgplot = plt.imshow(trainfeature[0].squeeze())
-        output=model(trainfeature)
-        print(output.data)
-        exit()
-        #exit()
-        
-       
-    def load_data_from_clean_model(self, model):
+        data_load= Ataque.load_dataset()
+        print("Model successfully load!")
+
+
+    def load_epoch(self, model):
         x = gen_dataset_loader.LoaderOperator(torch_dset=path)
         train_dl= x.get_loader(mode=train, torch_dset=path, batch_size=50)
         test_dl= x.get_loader(mode=test, torch_dset=path, batch_size=50)
-       
+        print("I'm the trained epoch")
         return train_dl, test_dl
         
-    
+    def load_dataset(path_dataset="./MedNIST/"):
+        # Dataset
+        json_confs=get_configs()
+        train_data_aug = DataAugOperator()
+        train_data_aug.set_pipeline(json_confs["train"]["transformations"])
+        val_data_aug = DataAugOperator()
+        val_data_aug.set_pipeline(json_confs["val"]["transformations"])
+        mednist_data = datasets.ImageFolder(root="./MedNIST/")
+        train_data = MedNISTDataset(mednist_data, train_data_aug.get_pipeline())
+        val_data = MedNISTDataset(mednist_data, val_data_aug.get_pipeline())
+        data_loader = LoaderOperator(train_data)
+        train_loader = data_loader.get_loader("train", train_data, json_confs["train"]["batch_size"])
+        val_loader = data_loader.get_loader("val", val_data, json_confs["val"]["batch_size"])
+        report = AccuracyReport()
+        total = 0
+        correct = 0
+        step = 0
+        nb_epochs=1
+        train_loss = []
+        ch, w, h = train_data[0][0].shape
+        inpt_dims = [train_loader.batch_size, ch, w, h]
+        model = torch_model.Network(inpt_dims)
+        optimizer= torch_model.get_optimizer(model)
+        for _epoch in range(nb_epochs):
+            for xs, ys in train_loader:
+                xs, ys = Variable(xs), Variable(ys)
+                if torch.cuda.is_available():
+                    xs, ys = xs.cuda(), ys.cuda()
+                preds = model(xs)
+                loss = F.nll_loss(preds, ys)
+                loss.backward()  # calc gradients 
+                preds_np = preds.cpu().detach().numpy()
+                correct += (np.argmax(preds_np, axis=1) == ys.cpu().detach().numpy()).sum()
+                total += train_loader.batch_size
+                step += 1
+                if total % 1000 == 0:
+                    acc = float(correct) / total
+                    print("[%s] Training accuracy: %.2f%%" % (step, acc * 100))
+                    total = 0
+                    correct = 0
+
+
+        # Evaluate on clean data
+        total = 0
+        correct = 0
+        for xs, ys in val_loader:
+            xs, ys = Variable(xs), Variable(ys)
+            if torch.cuda.is_available():
+                xs, ys = xs.cuda(), ys.cuda()
+
+            preds = model(xs)
+            preds_np = preds.cpu().detach().numpy()
+
+            correct += (np.argmax(preds_np, axis=1) == ys.cpu().detach().numpy()).sum()
+            total += len(xs)
+
+        acc = float(correct) / total
+        report.clean_train_clean_eval = acc
+        print("[%s] Clean accuracy: %.2f%%" % (step, acc * 100))
+
+        # We use tf for evaluation on adversarial data
+        sess = tf.compat.v1.Session()
+        tf.compat.v1.disable_eager_execution()
+        x_op = tf.compat.v1.placeholder(
+            tf.float32,
+            shape=(
+                None,
+                1,
+                28,
+                28,
+            ),
+        )
+
+        # Convert pytorch model to a tf_model and wrap it in cleverhans
+        tf_model_fn = convert_pytorch_model_to_tf(model)
+        cleverhans_model = CallableModelWrapper(tf_model_fn, output_layer="logits")
+
+        # Create an FGSM attack
+        fgsm_op = FastGradientMethod(cleverhans_model, sess=sess)
+        fgsm_params = {"eps": 0.3, "clip_min": 0.0, "clip_max": 1.0}
+        adv_x_op = fgsm_op.generate(x_op, **fgsm_params)
+        adv_preds_op = tf_model_fn(adv_x_op)
+
+        # Run an evaluation of our model against fgsm
+        total = 0
+        correct = 0
+        for xs, ys in val_loader:
+            adv_preds = sess.run(adv_preds_op, feed_dict={x_op: xs})
+            correct += (np.argmax(adv_preds, axis=1) == ys.cpu().detach().numpy()).sum()
+            total += val_loader.batch_size
+
+        acc = float(correct) / total
+        print("Adv accuracy: {:.3f}".format(acc * 100))
+        report.clean_train_adv_eval = acc
+        return report
+
 
 if __name__ == '__main__':
     path= 'models/Demo/LOGS/models/nnet_epoch_9.pt'
@@ -107,9 +176,7 @@ if __name__ == '__main__':
     
     ataque = Ataque(model, path)
     ataque.load_model(model, path)
-    train_dl, test_dl = ataque.load_data_from_clean_model(model)
-    print(train_dl)
+    train_dl, test_dl = ataque.load_epoch(model)
 
-    exit()
-    val_loader = data_loader.get_loader("val", val_data, json_confs["val"]["batch_size"])
+
 

@@ -67,7 +67,6 @@ def run_model_train(args):
     ch, w, h = train_data[0][0].shape
     inpt_dims = [train_loader.batch_size, ch, w, h]
     print(inpt_dims)
-    exit()
     model = torch_model.Network(inpt_dims)
     optim, scheduler = torch_model.get_optimizer(model)
     print(model)
