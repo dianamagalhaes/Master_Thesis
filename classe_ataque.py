@@ -92,6 +92,8 @@ class Ataque:
         inpt_dims = [train_loader.batch_size, ch, w, h]
         model = torch_model.Network(inpt_dims)
         optimizer= torch_model.get_optimizer(model)
+
+
         for _epoch in range(nb_epochs):
             for xs, ys in train_loader:
                 xs, ys = Variable(xs), Variable(ys)
@@ -135,10 +137,10 @@ class Ataque:
         x_op = tf.compat.v1.placeholder(
             tf.float32,
             shape=(
-                None,
-                1,
-                28,
-                28,
+                16,
+                3,
+                64,
+                64,
             ),
         )
 
@@ -156,6 +158,7 @@ class Ataque:
         total = 0
         correct = 0
         for xs, ys in val_loader:
+
             adv_preds = sess.run(adv_preds_op, feed_dict={x_op: xs})
             correct += (np.argmax(adv_preds, axis=1) == ys.cpu().detach().numpy()).sum()
             total += val_loader.batch_size
