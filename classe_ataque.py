@@ -33,6 +33,8 @@ from cleverhans.model import CallableModelWrapper
 import tensorflow as tf
 from cleverhans.attacks import FastGradientMethod
 
+
+
 def get_configs():
 
     json_file_path = "/home/diana-dtx/Desktop/Master_Thesis/models/Demo/configs.json"
@@ -66,7 +68,7 @@ class Ataque:
         x = gen_dataset_loader.LoaderOperator(torch_dset=path)
         train_dl= x.get_loader(mode=train, torch_dset=path, batch_size=50)
         test_dl= x.get_loader(mode=test, torch_dset=path, batch_size=50)
-        print("I'm the trained epoch")
+ 
         return train_dl, test_dl
         
     def load_dataset(path_dataset="./MedNIST/"):
@@ -93,7 +95,9 @@ class Ataque:
         model = torch_model.Network(inpt_dims)
         optimizer= torch_model.get_optimizer(model)
 
+        train_acc=[]
 
+        fig, ax = plt.subplots()
         for _epoch in range(nb_epochs):
             for xs, ys in train_loader:
                 xs, ys = Variable(xs), Variable(ys)
@@ -106,12 +110,16 @@ class Ataque:
                 correct += (np.argmax(preds_np, axis=1) == ys.cpu().detach().numpy()).sum()
                 total += train_loader.batch_size
                 step += 1
+
                 if total % 1000 == 0:
                     acc = float(correct) / total
                     print("[%s] Training accuracy: %.2f%%" % (step, acc * 100))
+                    train_acc.append(acc)
+                    
                     total = 0
                     correct = 0
-
+        acc_graph=ax.plot(range(len(train_acc)), train_acc, label = 'Accuracy %', color = '#fcba03')
+        plt.savefig("/home/diana-dtx/Desktop/Master_Thesis/train_accuracy_plot.PNG")
 
         # Evaluate on clean data
         total = 0
@@ -158,10 +166,14 @@ class Ataque:
         total = 0
         correct = 0
         for xs, ys in val_loader:
-
-            adv_preds = sess.run(adv_preds_op, feed_dict={x_op: xs})
-            correct += (np.argmax(adv_preds, axis=1) == ys.cpu().detach().numpy()).sum()
-            total += val_loader.batch_size
+            adv_preds_op = tf.compat.v1.placeholder(tf.float32, [None, 2, 2, 1], name='x-input')
+            reshaped_x_op = tf.reshape(adv_preds_op, [-1, 4])
+            with tf.compat.v1.Session() as sess:
+                x = [[[[16], [3]], [[64], [64]]]]
+                #print(sess.run(reshaped_x_op, feed_dict={adv_preds_op: x}))
+                adv_preds = sess.run(reshaped_x_op, feed_dict={adv_preds_op: x})
+                correct += (np.argmax(adv_preds, axis=1) == ys.cpu().detach().numpy()).sum()
+                total += val_loader.batch_size
 
         acc = float(correct) / total
         print("Adv accuracy: {:.3f}".format(acc * 100))
