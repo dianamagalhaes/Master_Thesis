@@ -198,6 +198,6 @@ if __name__ == "__main__":
     json_confs = get_configs()
 
     ataque = Ataque(model, path)
-    ataque.load_model()
+    ataque.load_model(json_confs)
     train_dl, test_dl = ataque.load_epoch(model)
 
