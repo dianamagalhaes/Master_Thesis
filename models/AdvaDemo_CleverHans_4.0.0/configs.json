@@ -1,0 +1,46 @@
+{
+    "train": {
+        "batch_size": 16,
+        "epochs": 2,
+        "transformations": {
+            "RandomHorizontalFlip": {
+                "p": 0.5
+            },
+            "RandomRotation": {
+                "degrees": [
+                    -20,
+                    20
+                ]
+            },
+            "RandomCrop": {
+                "size": [
+                    64,
+                    64
+                ]
+            }
+        }
+    },
+    "val": {
+        "batch_size": 16,
+        "transformations": {
+            "RandomHorizontalFlip": {
+                "p": 0.5
+            },
+            "RandomRotation": {
+                "degrees": [
+                    -20,
+                    20
+                ]
+            },
+            "RandomCrop": {
+                "size": [
+                    64,
+                    64
+                ]
+            }
+        }
+    },
+    "test": {
+        "batch_size": 1
+    }
+}
