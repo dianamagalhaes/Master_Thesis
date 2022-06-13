@@ -60,7 +60,7 @@ def get_configs(json_file_path: str) -> dict:
 
 
 class Ataque:
-    def __init__(self, model, path: str):
+    def __init__(self):
         self.model = model
         self.path = path
 
@@ -104,7 +104,7 @@ class Ataque:
         print(model)
 
         # TODO add the possibility to define which hardware will run the train
-        model_operator = ModelOperator(torch_model.loss, optim, use_cuda="0")
+        model_operator = ModelOperator(torch_model.loss, optim, use_cuda=False)
         model.to(model_operator.get_device())
 
         # Train vanilla model
@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
     json_confs = get_configs(json_file_path)
 
-    ataque = Ataque(model, path)
+    ataque = Ataque()
     ataque.load_model(json_confs)
     train_dl, test_dl = ataque.load_epoch(model)
 
