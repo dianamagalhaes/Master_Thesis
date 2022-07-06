@@ -68,10 +68,12 @@ def run_model_train(args):
     inpt_dims = [train_loader.batch_size, ch, w, h]
     print(inpt_dims)
     model = torch_model.Network(inpt_dims)
-    optim, scheduler = torch_model.get_optimizer(model)
+    optimizer, scheduler = torch_model.get_optimizer(model)
     print(model)
 
-    model_operator = ModelOperator(torch_model.loss, optim, use_cuda=args.gpu)
+    model_operator = ModelOperator(use_cuda=args.gpu)
+    model_operator.set_loss(torch_model.loss)
+    model_operator.set_optimizer(optimizer)
 
     logger = TensorboardLoggerOperator(model_dir, labels_index=mednist_data.class_to_idx)
     print(logger.tb_logger)
@@ -80,7 +82,7 @@ def run_model_train(args):
     trainer_operator = Trainer(model_operator, logger, epochs=json_confs["train"]["epochs"])
     trainer_operator.run_epochs(model, train_loader, val_loader, scheduler)
 
-    
+
 def run_model_eval(args):
 
     args.model_name
