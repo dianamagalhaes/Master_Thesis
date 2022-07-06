@@ -7,6 +7,10 @@ class DataAugOperator:
         self.transformations = transforms.Compose([])
 
     @staticmethod
+    def get_Grayscale():
+        return transforms.Grayscale()
+
+    @staticmethod
     def get_RandomHorizontalFlip(p):
         return transforms.RandomHorizontalFlip(p=p)
 
@@ -28,9 +32,8 @@ class DataAugOperator:
 
     def set_pipeline(self, trfm_pipeline):
 
-        for trfn_name, transform_details in trfm_pipeline.items():
-
-            operator = getattr(self, f"get_{trfn_name}")
+        for trfm_name, transform_details in trfm_pipeline.items():
+            operator = getattr(self, f"get_{trfm_name}")
             data_trfrms = operator(**transform_details)
             self.transformations.transforms.append(data_trfrms)
 
