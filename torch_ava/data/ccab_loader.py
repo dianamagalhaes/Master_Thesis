@@ -55,3 +55,4 @@ if __name__ == "__main__":
         dataframe_path = "/home/apinto/Documents/projects/msc_thesis_DianaMag/models/SA_Classification_AI4MED/EXTRA_DETAILS/test_dataframe.csv"
 
     ccab_dset = CCAB_Dataset(cardiomr_base_dir=cardiomr_base_dir, dataframe_path=dataframe_path)
+    print("Numpy image array", ccab_dset.__getitem__(0)[0], "\n Class Index", ccab_dset.__getitem__(0)[1])
