@@ -182,33 +182,33 @@ class Ataque:
         for x, y in torch_val_loader:
             x, y = x.to(device), y.to(device)
             #x_fgm = fast_gradient_method(model, x, adva_eps, np.inf)
-            x_pgd = projected_gradient_descent(model, x, adva_eps, 0.01, 40, np.inf)
-            # x_sparse = sparse_l1_descent(model, x)
-            # x_carliniwagnerL2 = carlini_wagner_l2(model, x, n_classes=10)
-            # x_lbfgs = LBFGS(model)
-            # x_hop = hop_skip_jump_attack(model, x, np.inf)
+            #x_pgd = projected_gradient_descent(model, x, adva_eps, 0.01, 40, np.inf)
+            #x_sparse = sparse_l1_descent(model, x)
+            #x_carliniwagnerL2 = carlini_wagner_l2(model, x, n_classes=10)
+            #x_lbfgs = LBFGS(model)
+            x_hop = hop_skip_jump_attack(model, x, np.inf)
             _, y_pred = model(x).max(1)  # model prediction on clean examples
             #_, y_pred_fgm = model(x_fgm).max(1)  # model prediction on FGM adversarial examples
-            _, y_pred_pgd = model(x_pgd).max(1)  # model prediction on PGD adversarial examples
-            # _, y_pred_carliniwagnerl2 = model(x_carliniwagnerL2).max(1)
-            # _, y_pred_sparse = model(x_sparse).max(1) # model prediction on Sparse L1 Descent adversarial examples
-            # _, y_pred_lbfgs = model(x_lbfgs).max(1) # model prediction on LBFGS adversarial examples
-            # _, y_pred_hop = model(x_hop).max(1)  # model prediction on Hop Skip Jump adversarial examples
+            #_, y_pred_pgd = model(x_pgd).max(1)  # model prediction on PGD adversarial examples
+            #_, y_pred_carliniwagnerl2 = model(x_carliniwagnerL2).max(1)
+            #_, y_pred_sparse = model(x_sparse).max(1) # model prediction on Sparse L1 Descent adversarial examples
+            #_, y_pred_lbfgs = model(x_lbfgs).max(1) # model prediction on LBFGS adversarial examples
+            _, y_pred_hop = model(x_hop).max(1)  # model prediction on Hop Skip Jump adversarial examples
             report.nb_test += y.size(0)
             report.correct += y_pred.eq(y).sum().item()
             #report.correct_fgm += y_pred_fgm.eq(y).sum().item()
-            report.correct_pgd += y_pred_pgd.eq(y).sum().item()
-            # report.correct_carliniwagnerl2 += y_pred_carliniwagnerl2.eq(y).sum().item()
-            # report.correct_lbfgs += y_pred_lbfgs.eq(y).sum().item()
-            # report.correct_sparse += y_pred_sparse.eq(y).sum().item()
-            # report.correct_hop += y_pred_hop.eq(y).sum().item()
+            #report.correct_pgd += y_pred_pgd.eq(y).sum().item()
+            #report.correct_carliniwagnerl2 += y_pred_carliniwagnerl2.eq(y).sum().item()
+            #report.correct_lbfgs += y_pred_lbfgs.eq(y).sum().item()
+            #report.correct_sparse += y_pred_sparse.eq(y).sum().item()
+            report.correct_hop += y_pred_hop.eq(y).sum().item()
         print("test acc on clean examples (%): {:.3f}".format(report.correct / report.nb_test * 100.0))
         #print("test acc on FGM adversarial examples (%): {:.3f}".format(report.correct_fgm / report.nb_test * 100.0))
-        print("test acc on PGD adversarial examples (%): {:.3f}".format(report.correct_pgd / report.nb_test * 100.0))
-        # print("test acc on Carlini Wagner L2 adversarial examples (%): {:.3f}".format(report.correct_carliniwagnerl2 / report.nb_test * 100.0))
-        # print("test acc on Sparse L1 Descent adversarial examples (%): {:.3f}".format(report.correct_sparse / report.nb_test * 100.0))
-        # print("test acc on LBFGS adversarial examples (%): {:.3f}".format(report.correct_lbfgs / report.nb_test * 100.0))
-        #print("test acc on Hop Skip Jump adversarial examples (%): {:.3f}".format(report.correct_hop / report.nb_test * 100.0))
+        #print("test acc on PGD adversarial examples (%): {:.3f}".format(report.correct_pgd / report.nb_test * 100.0))
+        #print("test acc on Carlini Wagner L2 adversarial examples (%): {:.3f}".format(report.correct_carliniwagnerl2 / report.nb_test * 100.0))
+        #print("test acc on Sparse L1 Descent adversarial examples (%): {:.3f}".format(report.correct_sparse / report.nb_test * 100.0))
+        #print("test acc on LBFGS adversarial examples (%): {:.3f}".format(report.correct_lbfgs / report.nb_test * 100.0))
+        print("test acc on Hop Skip Jump adversarial examples (%): {:.3f}".format(report.correct_hop / report.nb_test * 100.0))
 
 
 if __name__ == "__main__":
