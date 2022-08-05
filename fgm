@@ -1,0 +1,19 @@
+The model saving only considered the dictionary of weights. Not the whole model.
+Model successfully load!
+Training samples: 35372
+Validation samples: 11790
+Feature batch shape: torch.Size([16, 1, 64, 64])
+              precision    recall  f1-score   support
+
+   AbdomenCT     0.6940    0.9726    0.8100      2008
+   BreastMRI     0.5219    0.9689    0.6784      1830
+         CXR     0.5824    0.9681    0.7272      1972
+     ChestCT     0.0000    0.0000    0.0000      2048
+        Hand     0.7284    0.0910    0.1619      1944
+      HeadCT     0.9639    0.9799    0.9718      1988
+
+    accuracy                         0.6582     11790
+   macro avg     0.5818    0.6634    0.5582     11790
+weighted avg     0.5793    0.6582    0.5555     11790
+
+test acc on clean examples (%): 65.818

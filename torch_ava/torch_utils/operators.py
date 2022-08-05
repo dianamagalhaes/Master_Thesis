@@ -54,7 +54,7 @@ class TensorboardLoggerOperator:
 
 
 class ModelOperator:
-    def __init__(self, loss: torch.nn.Module, optimizer: torch.optim, use_cuda: Union[bool, int]) -> None:
+    def __init__(self, use_cuda: Union[bool, int]) -> None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
         if use_cuda is not False:
@@ -63,8 +63,6 @@ class ModelOperator:
         else:
             device = "cpu"
         self.device = torch.device(device)
-        self.loss = loss
-        self.optimizer = optimizer
 
     def get_device(self):
         return self.device
@@ -78,6 +76,12 @@ class ModelOperator:
         model_fname = "nnet_epoch_" + str(epoch) + ".pt"
         model_fpath = os.path.join(dir_path, model_fname)
         torch.save(model, model_fpath)
+
+    def set_loss(self, loss: torch.nn.Module):
+        self.loss = loss
+
+    def set_optimizer(self, optimizer: torch.optim):
+        self.optimizer = optimizer
 
     def compute_loss(self, y_pred, y_true):
         # criterion = torch.nn.CrossEntropyLoss()
