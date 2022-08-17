@@ -1,7 +1,15 @@
 {
+    "target_names": [
+        "AbdomenCT",
+        "BreastMRI",
+        "CXR",
+        "ChestCT",
+        "Hand",
+        "HeadCT"
+    ],
     "train": {
-        "batch_size": 16,
-        "epochs": 2,
+        "batch_size": 300,
+        "epochs": 5,
         "transformations": {
             "Grayscale": {},
             "RandomHorizontalFlip": {
@@ -18,16 +26,25 @@
                     64,
                     64
                 ]
-            }
+            },
+            "ToNumpy": {},
+            "ScaleIntensity": {}
         }
     },
     "val": {
         "batch_size": 16,
         "transformations": {
-            "Grayscale": {}
+            "Grayscale": {},
+            "ToNumpy": {},
+            "ScaleIntensity": {}
         }
     },
     "test": {
-        "batch_size": 1
+        "batch_size": 200,
+        "transformations": {
+            "Grayscale": {},
+            "ToNumpy": {},
+            "ScaleIntensity": {}
+        }
     }
 }
