@@ -1,6 +1,6 @@
 import os
 import torch
-from typing import Union
+from typing import Literal, Union
 from torch.utils.tensorboard import SummaryWriter
 
 from torch_ava.utils import create_dir_recursively
@@ -54,15 +54,16 @@ class TensorboardLoggerOperator:
 
 
 class ModelOperator:
-    def __init__(self, use_cuda: Union[bool, int]) -> None:
+    def __init__(self, device: Literal["cuda", "cpu"]) -> None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
-        if use_cuda is not False:
-            os.environ["CUDA_VISIBLE_DEVICES"] = use_cuda
-            device = "cuda"
+        cuda_devices = torch.cuda.device_count()
+        cuda_codenames = [f"cuda:{idx}" for idx in range(cuda_devices)]
+
+        if device in cuda_codenames:
+            self.device = torch.device(device)
         else:
-            device = "cpu"
-        self.device = torch.device(device)
+            self.device = torch.device("cpu")
 
     def get_device(self):
         return self.device
