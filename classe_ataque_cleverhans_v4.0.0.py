@@ -203,12 +203,12 @@ class Ataque:
 
         print(
             "\n Classification Performance on clean samples: \n",
-            classification_report(y_true, y_pred, target_names=self.json_confs["target_names"], digits=4),
+            classification_report(y_true, y_pred, digits=4),
         )
 
         print(
             f"\n Classification Performance on {attack_name} Adversarial Attack: \n",
-            classification_report(y_true, y_pred_attacked, target_names=self.json_confs["target_names"], digits=4),
+            classification_report(y_true, y_pred_attacked, digits=4),
         )
 
 
