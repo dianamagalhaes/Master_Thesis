@@ -98,9 +98,10 @@ class Ataque:
         self.labels_to_idx = mednist_data.class_to_idx
         data_loader = LoaderOperator(mednist_data)
         print(type(mednist_data))
-        torch_dset, torch_train_loader = self._get_loader("train", data_loader, mednist_data, self.json_confs)
-        _, torch_val_loader = self._get_loader("val", data_loader, mednist_data, self.json_confs)
-        _, torch_test_loader = self._get_loader("test", data_loader, mednist_data, self.json_confs)
+        print("EU")
+        torch_dset, torch_train_loader = self._get_loader("train", data_loader, np.array(mednist_data), self.json_confs)
+        _, torch_val_loader = self._get_loader("val", data_loader, np.array(mednist_data), self.json_confs)
+        _, torch_test_loader = self._get_loader("test", data_loader, np.array(mednist_data), self.json_confs)
 
         train_features, _ = next(iter(torch_train_loader))
         print(f"Feature batch shape: {train_features.size()}")
