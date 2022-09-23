@@ -3,7 +3,6 @@
         "batch_size": 16,
         "epochs": 2,
         "transformations": {
-            "Grayscale": {},
             "RandomHorizontalFlip": {
                 "p": 0.5
             },
@@ -20,23 +19,21 @@
                 ]
             },
             "ToNumpy": {},
-            "scaleIntensity": {}
+            "ScaleIntensity": {}
         }
     },
     "val": {
         "batch_size": 16,
         "transformations": {
-            "Grayscale": {},
             "ToNumpy": {},
-            "scaleIntensity": {}
+            "ScaleIntensity": {}
         }
     },
     "test": {
         "batch_size": 1,
         "transformations": {
-            "Grayscale": {},
             "ToNumpy": {},
-            "scaleIntensity": {}
+            "ScaleIntensity": {}
         }
     }
 }
