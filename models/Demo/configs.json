@@ -3,6 +3,7 @@
         "batch_size": 16,
         "epochs": 2,
         "transformations": {
+            "Grayscale": {},
             "RandomHorizontalFlip": {
                 "p": 0.5
             },
@@ -17,7 +18,9 @@
                     64,
                     64
                 ]
-            }
+            },
+            "ToNumpy": {},
+            "scaleIntensity": {}
         }
     },
     "val": {
