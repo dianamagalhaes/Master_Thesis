@@ -3,6 +3,7 @@
         "batch_size": 16,
         "epochs": 2,
         "transformations": {
+            "Grayscale": {},
             "RandomHorizontalFlip": {
                 "p": 0.5
             },
@@ -17,30 +18,25 @@
                     64,
                     64
                 ]
-            }
+            },
+            "ToNumpy": {},
+            "scaleIntensity": {}
         }
     },
     "val": {
         "batch_size": 16,
         "transformations": {
-            "RandomHorizontalFlip": {
-                "p": 0.5
-            },
-            "RandomRotation": {
-                "degrees": [
-                    -20,
-                    20
-                ]
-            },
-            "RandomCrop": {
-                "size": [
-                    64,
-                    64
-                ]
-            }
+            "Grayscale": {},
+            "ToNumpy": {},
+            "scaleIntensity": {}
         }
     },
     "test": {
-        "batch_size": 1
+        "batch_size": 1,
+        "transformations": {
+            "Grayscale": {},
+            "ToNumpy": {},
+            "scaleIntensity": {}
+        }
     }
 }
