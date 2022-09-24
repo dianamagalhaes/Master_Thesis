@@ -1,0 +1,37 @@
+Training samples: 35372
+Validation samples: 11790
+<class 'torchvision.datasets.folder.ImageFolder'>
+EU
+Feature batch shape: torch.Size([300, 1, 64, 64])
+The model saving only considered the dictionary of weights. Not the whole model.
+Model successfully load!
+
+ Classification Performance on clean samples: 
+               precision    recall  f1-score   support
+
+           0     0.9473    0.7435    0.8331      2008
+           1     0.5204    0.9628    0.6756      1830
+           2     0.9676    0.9681    0.9678      1972
+           3     0.9846    1.0000    0.9922      2048
+           4     0.7500    0.0910    0.1624      1944
+           5     0.7660    0.9784    0.8593      1988
+
+    accuracy                         0.7917     11790
+   macro avg     0.8227    0.7906    0.7484     11790
+weighted avg     0.8278    0.7917    0.7527     11790
+
+
+ Classification Performance on Fast Gradient Method Adversarial Attack: 
+               precision    recall  f1-score   support
+
+           0     0.0000    0.0000    0.0000      2008
+           1     0.0000    0.0000    0.0000      1830
+           2     0.0000    0.0000    0.0000      1972
+           3     0.1749    0.8101    0.2876      2048
+           4     0.0000    0.0000    0.0000      1944
+           5     0.1654    0.1916    0.1776      1988
+
+    accuracy                         0.1730     11790
+   macro avg     0.0567    0.1670    0.0775     11790
+weighted avg     0.0583    0.1730    0.0799     11790
+
