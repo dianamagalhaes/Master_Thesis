@@ -72,7 +72,7 @@ class Ataque:
             "kwargs": {"eps": 0.3, "eps_iter": 0.01, "nb_iter": 40, "norm": np.inf},
         },
         "Sparse L1 Descent": {"call": sparse_l1_descent, "kwargs": {}},
-        "Carlini Wagner L2": {"call": carlini_wagner_l2, "kwargs": {"n_classes": 6}},
+        "Carlini Wagner L2": {"call": carlini_wagner_l2, "kwargs": {"n_classes": 10}},
         "Hop Skip Jump": {"call": hop_skip_jump_attack, "kwargs": {"norm": np.inf}},
     }
 
@@ -97,8 +97,7 @@ class Ataque:
         mednist_data = datasets.ImageFolder(root=self.dataset_path)
         self.labels_to_idx = mednist_data.class_to_idx
         data_loader = LoaderOperator(mednist_data)
-        print(type(mednist_data))
-        print("EU")
+
         torch_dset, torch_train_loader = self._get_loader("train", data_loader, mednist_data, self.json_confs)
         _, torch_val_loader = self._get_loader("val", data_loader, mednist_data, self.json_confs)
         _, torch_test_loader = self._get_loader("test", data_loader, mednist_data, self.json_confs)
@@ -267,4 +266,4 @@ if __name__ == "__main__":
     model_weights_path = glob.glob(f"models/{args.model_name}/LOGS/models/best*")[0]
 
     model = ataque.load_torch_model(model_weights_path)
-    ataque.eval_attack(model, "Fast Gradient Method", torch_val_loader, device=args.device)
+    ataque.eval_attack(model, "Carlini Wagner L2", torch_val_loader, device=args.device)

@@ -1,6 +1,6 @@
 {
     "train": {
-        "batch_size": 16,
+        "batch_size": 1536,
         "epochs": 2,
         "transformations": {
             "RandomHorizontalFlip": {
@@ -23,7 +23,7 @@
         }
     },
     "val": {
-        "batch_size": 16,
+        "batch_size": 1536,
         "transformations": {
             "ToNumpy": {},
             "ScaleIntensity": {}
