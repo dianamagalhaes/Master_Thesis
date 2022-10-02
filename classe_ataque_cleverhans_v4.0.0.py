@@ -148,21 +148,6 @@ class Ataque:
         trainer_operator = Trainer(model_operator, logger, epochs=self.json_confs["train"]["epochs"])
         trainer_operator.run_epochs(model, torch_train_loader, torch_val_loader, scheduler)
 
-        # Train vanilla model
-        model.train()
-        for epoch in range(1, 1 + 1):
-            train_loss = 0.0
-            for x, y in torch_train_loader:
-                x, y = x.to(model_operator.get_device()), y.to(model_operator.get_device())
-
-                optimizer.zero_grad()
-                out = model(x)
-                loss = model_operator.compute_loss(out, y)
-                loss.backward()
-                optimizer.step()
-                train_loss += loss.item()
-            print("epoch: {}/{}, train loss: {:.3f}".format(epoch, 1, train_loss))
-
     def eval_attack(self, model: object, attack_name: str, torch_loader: object, device: str):
         # Evaluate on clean and adversarial data
 
@@ -201,8 +186,7 @@ class Ataque:
             y_pred_attacked += pred_attacked
 
         print(
-            "\n Classification Performance on clean samples: \n",
-            classification_report(y_true, y_pred, digits=4),
+            "\n Classification Performance on clean samples: \n", classification_report(y_true, y_pred, digits=4),
         )
 
         print(
@@ -255,15 +239,16 @@ if __name__ == "__main__":
     ataque = Ataque(json_confs=model_configs)
     torch_dset, torch_train_loader, torch_val_loader, torch_test_loader = ataque.load_dataset()
 
-    # model, optim, _ = ataque.set_model_to_train(torch_dset, torch_train_loader=torch_train_loader)
-    # ataque.train_model(model, args.device, torch_train_loader, torch_val_loader, optim, None)
+    model, optim, _ = ataque.set_model_to_train(torch_dset, torch_train_loader=torch_train_loader)
+    ataque.train_model(model, args.device, torch_train_loader, torch_val_loader, optim, None)
 
     # Pipeline for an already trained model
 
     # We will assume that there is only one best model
     # Note that the torch models can either be with .pt or .pth extension.
     # For .pth models, only a dictionary of the weights are store not the whole model!
-    model_weights_path = glob.glob(f"models/{args.model_name}/LOGS/models/best*")[0]
+    # model_weights_path = glob.glob(f"models/{args.model_name}/LOGS/models/best*")[0]
 
-    model = ataque.load_torch_model(model_weights_path)
-    ataque.eval_attack(model, "Carlini Wagner L2", torch_val_loader, device=args.device)
+    # model = ataque.load_torch_model(model_weights_path)
+    # ataque.eval_attack(model, "Fast Gradient Method", torch_val_loader, device=args.device)
+
