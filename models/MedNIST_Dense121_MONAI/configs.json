@@ -1,9 +1,9 @@
 {
-    "target_names": [
+    "target_image": [
         "AbdomenCT",
         "BreastMRI",
-        "CXR",
         "ChestCT",
+        "CXR",
         "Hand",
         "HeadCT"
     ],

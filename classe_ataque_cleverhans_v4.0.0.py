@@ -239,16 +239,16 @@ if __name__ == "__main__":
     ataque = Ataque(json_confs=model_configs)
     torch_dset, torch_train_loader, torch_val_loader, torch_test_loader = ataque.load_dataset()
 
-    model, optim, _ = ataque.set_model_to_train(torch_dset, torch_train_loader=torch_train_loader)
-    ataque.train_model(model, args.device, torch_train_loader, torch_val_loader, optim, None)
+    #model, optim, _ = ataque.set_model_to_train(torch_dset, torch_train_loader=torch_train_loader)
+    #ataque.train_model(model, args.device, torch_train_loader, torch_val_loader, optim, None)
 
     # Pipeline for an already trained model
 
     # We will assume that there is only one best model
     # Note that the torch models can either be with .pt or .pth extension.
     # For .pth models, only a dictionary of the weights are store not the whole model!
-    # model_weights_path = glob.glob(f"models/{args.model_name}/LOGS/models/best*")[0]
+    model_weights_path = glob.glob(f"models/{args.model_name}/LOGS/models/best*")[0]
 
-    # model = ataque.load_torch_model(model_weights_path)
-    # ataque.eval_attack(model, "Fast Gradient Method", torch_val_loader, device=args.device)
+    model = ataque.load_torch_model(model_weights_path)
+    ataque.eval_attack(model, "Hop Skip Jump", torch_val_loader, device=args.device)
 
