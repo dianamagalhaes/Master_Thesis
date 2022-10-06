@@ -34,7 +34,7 @@ from torch_ava.data import MedNISTDataset, LoaderOperator
 from torch_ava.torch_utils import TensorboardLoggerOperator, ModelOperator
 from torch_ava.engine.trainer import Trainer
 
-
+torch.cuda.empty_cache()
 def set_module_import(model_name: str):
     """This utility function imports the model folder as an additional module of this script.
     Allowing it to gather all the necessary information for train/val/test and also to attack the model.
@@ -72,7 +72,7 @@ class Ataque:
             "kwargs": {"eps": 0.3, "eps_iter": 0.01, "nb_iter": 40, "norm": np.inf},
         },
         "Sparse L1 Descent": {"call": sparse_l1_descent, "kwargs": {}},
-        "Carlini Wagner L2": {"call": carlini_wagner_l2, "kwargs": {"n_classes": 10}},
+        "Carlini Wagner L2": {"call": carlini_wagner_l2, "kwargs": {"n_classes": 6}},
         "Hop Skip Jump": {"call": hop_skip_jump_attack, "kwargs": {"norm": np.inf}},
     }
 
@@ -239,8 +239,8 @@ if __name__ == "__main__":
     ataque = Ataque(json_confs=model_configs)
     torch_dset, torch_train_loader, torch_val_loader, torch_test_loader = ataque.load_dataset()
 
-    #model, optim, _ = ataque.set_model_to_train(torch_dset, torch_train_loader=torch_train_loader)
-    #ataque.train_model(model, args.device, torch_train_loader, torch_val_loader, optim, None)
+   # model, optim, _ = ataque.set_model_to_train(torch_dset, torch_train_loader=torch_train_loader)
+   # ataque.train_model(model, args.device, torch_train_loader, torch_val_loader, optim, None)
 
     # Pipeline for an already trained model
 
@@ -250,5 +250,5 @@ if __name__ == "__main__":
     model_weights_path = glob.glob(f"models/{args.model_name}/LOGS/models/best*")[0]
 
     model = ataque.load_torch_model(model_weights_path)
-    ataque.eval_attack(model, "Hop Skip Jump", torch_val_loader, device=args.device)
+    ataque.eval_attack(model, "Carlini Wagner L2", torch_val_loader, device=args.device)
 

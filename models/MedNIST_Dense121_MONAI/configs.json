@@ -1,13 +1,5 @@
 {
-    "target_image": [
-        "AbdomenCT",
-        "BreastMRI",
-        "ChestCT",
-        "CXR",
-        "Hand",
-        "HeadCT"
-    ],
-    "train": {
+  "train": {
         "batch_size": 300,
         "epochs": 5,
         "transformations": {
@@ -32,7 +24,7 @@
         }
     },
     "val": {
-        "batch_size": 16,
+        "batch_size": 512,
         "transformations": {
             "Grayscale": {},
             "ToNumpy": {},
