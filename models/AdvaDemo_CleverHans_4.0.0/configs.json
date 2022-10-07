@@ -1,0 +1,39 @@
+{
+    "train": {
+        "batch_size": 16,
+        "epochs": 5,
+        "transformations": {
+            "RandomHorizontalFlip": {
+                "p": 0.5
+            },
+            "RandomRotation": {
+                "degrees": [
+                    -20,
+                    20
+                ]
+            },
+            "RandomCrop": {
+                "size": [
+                    64,
+                    64
+                ]
+            },
+            "ToNumpy": {},
+            "ScaleIntensity": {}
+        }
+    },
+    "val": {
+        "batch_size": 16,
+        "transformations":{
+            "ToNumpy": {},
+            "ScaleIntensity": {}
+        }
+    },
+    "test": {
+        "batch_size": 16,
+        "transformations": {
+            "ToNumpy": {},
+            "ScaleIntensity": {}
+        }
+    }
+}

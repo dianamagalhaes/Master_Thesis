@@ -1,0 +1,42 @@
+{
+  "train": {
+        "batch_size": 300,
+        "epochs": 5,
+        "transformations": {
+            "Grayscale": {},
+            "RandomHorizontalFlip": {
+                "p": 0.5
+            },
+            "RandomRotation": {
+                "degrees": [
+                    -20,
+                    20
+                ]
+            },
+            "RandomCrop": {
+                "size": [
+                    64,
+                    64
+                ]
+            },
+            "ToNumpy": {},
+            "ScaleIntensity": {}
+        }
+    },
+    "val": {
+        "batch_size": 512,
+        "transformations": {
+            "Grayscale": {},
+            "ToNumpy": {},
+            "ScaleIntensity": {}
+        }
+    },
+    "test": {
+        "batch_size": 200,
+        "transformations": {
+            "Grayscale": {},
+            "ToNumpy": {},
+            "ScaleIntensity": {}
+        }
+    }
+}

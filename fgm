@@ -1,0 +1,4 @@
+Model successfully load!
+Training samples: 35372
+Validation samples: 11790
+Feature batch shape: torch.Size([16, 3, 64, 64])

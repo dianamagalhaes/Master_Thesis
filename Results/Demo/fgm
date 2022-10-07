@@ -1,0 +1,19 @@
+Model successfully load!
+Training samples: 35372
+Validation samples: 11790
+Feature batch shape: torch.Size([16, 3, 64, 64])
+              precision    recall  f1-score   support
+
+   AbdomenCT     0.7064    0.4517    0.5510      2008
+   BreastMRI     0.3958    0.2481    0.3050      1830
+         CXR     0.5553    0.9397    0.6981      1972
+     ChestCT     0.6896    0.3916    0.4995      2048
+        Hand     0.3002    0.1507    0.2007      1944
+      HeadCT     0.3979    0.7772    0.5263      1988
+
+    accuracy                         0.4965     11790
+   macro avg     0.5075    0.4932    0.4634     11790
+weighted avg     0.5110    0.4965    0.4666     11790
+
+test acc on clean examples (%): 49.796
+test acc on FGM adversarial examples (%): 7.209

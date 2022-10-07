@@ -9,8 +9,7 @@ import os
 import importlib
 import sys
 import torch.optim as optim
-from yaml import load
-from torch_ava.data import gen_dataset_loader
+
 import numpy as np
 import time
 from torch_ava.data.get_transformations import DataAugOperator
@@ -34,6 +33,23 @@ import tensorflow as tf
 from cleverhans.attacks import FastGradientMethod
 
 
+def set_module_import():
+
+    if "ava_model" in sys.modules.keys():
+        submodules = [mod for mod in sys.modules.keys() if mod.startswith("ava_model.")]
+        del sys.modules["ava_model"]
+        for submodule in submodules:
+            del sys.modules[submodule]
+
+    module_path = os.path.join(f"./models/Demo", "__init__.py")
+    module_path = os.path.abspath(module_path)
+
+    spec = importlib.util.spec_from_file_location("ava_model", module_path)
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["ava_model"] = module
+    spec.loader.exec_module(module)
+
 
 def get_configs():
 
@@ -43,42 +59,38 @@ def get_configs():
         json_confs = json.load(f)
         return json_confs
 
-class Ataque: 
-    def __init__(self, model, path):
-        self.model= model
-        self.path= path
 
-    def load_model(self, model, path):    
-        #Avoiding the ava_module not found:
-        module_path = os.path.join(f"./models/Demo", "__init__.py"
-        )
-        module_path = os.path.abspath(module_path)
-        spec = importlib.util.spec_from_file_location("ava_model", module_path)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules["ava_model"] = module
-        spec.loader.exec_module(module)
-        
-        #Loading the Epoch correctly
-        model=torch.load(path)
-        data_load= Ataque.load_dataset()
+class Ataque:
+    def __init__(self, model, path: str):
+        self.model = model
+        self.path = path
+
+    def load_model(self, json_confs: dict):
+
+        # Loading the Epoch correctly
+        # TODO Check if the variable model needs to be used at the call Ataque.load_dataset()
+        # Also this function is performing operations beyond the scope of its name. Maybe it could be better to
+        # separate them.
+        model = torch.load(self.path)
+        data_load = Ataque.load_dataset(json_confs)
         print("Model successfully load!")
 
-
     def load_epoch(self, model):
-        x = gen_dataset_loader.LoaderOperator(torch_dset=path)
-        train_dl= x.get_loader(mode=train, torch_dset=path, batch_size=50)
-        test_dl= x.get_loader(mode=test, torch_dset=path, batch_size=50)
- 
+        x = LoaderOperator(torch_dset=path)
+        train_dl = x.get_loader(mode=train, torch_dset=path, batch_size=50)
+        test_dl = x.get_loader(mode=test, torch_dset=path, batch_size=50)
+
         return train_dl, test_dl
-        
-    def load_dataset(path_dataset="./MedNIST/"):
+
+    def load_dataset(json_confs: dict, path_dataset: str = "./MedNIST/"):
         # Dataset
-        json_confs=get_configs()
+        # Load Data Transformation Pipelines
         train_data_aug = DataAugOperator()
         train_data_aug.set_pipeline(json_confs["train"]["transformations"])
         val_data_aug = DataAugOperator()
         val_data_aug.set_pipeline(json_confs["val"]["transformations"])
-        mednist_data = datasets.ImageFolder(root="./MedNIST/")
+        # Load Dataset
+        mednist_data = datasets.ImageFolder(root=path_dataset)
         train_data = MedNISTDataset(mednist_data, train_data_aug.get_pipeline())
         val_data = MedNISTDataset(mednist_data, val_data_aug.get_pipeline())
         data_loader = LoaderOperator(train_data)
@@ -88,14 +100,15 @@ class Ataque:
         total = 0
         correct = 0
         step = 0
-        nb_epochs=1
+        nb_epochs = 1
         train_loss = []
         ch, w, h = train_data[0][0].shape
         inpt_dims = [train_loader.batch_size, ch, w, h]
+        # TODO check the TODO comment at the new line 70, since we are over-writing the variable once again.
         model = torch_model.Network(inpt_dims)
-        optimizer= torch_model.get_optimizer(model)
+        optimizer = torch_model.get_optimizer(model)
 
-        train_acc=[]
+        train_acc = []
 
         fig, ax = plt.subplots()
         for _epoch in range(nb_epochs):
@@ -105,7 +118,7 @@ class Ataque:
                     xs, ys = xs.cuda(), ys.cuda()
                 preds = model(xs)
                 loss = F.nll_loss(preds, ys)
-                loss.backward()  # calc gradients 
+                loss.backward()  # calc gradients
                 preds_np = preds.cpu().detach().numpy()
                 correct += (np.argmax(preds_np, axis=1) == ys.cpu().detach().numpy()).sum()
                 total += train_loader.batch_size
@@ -115,10 +128,10 @@ class Ataque:
                     acc = float(correct) / total
                     print("[%s] Training accuracy: %.2f%%" % (step, acc * 100))
                     train_acc.append(acc)
-                    
+
                     total = 0
                     correct = 0
-        acc_graph=ax.plot(range(len(train_acc)), train_acc, label = 'Accuracy %', color = '#fcba03')
+        acc_graph = ax.plot(range(len(train_acc)), train_acc, label="Accuracy %", color="#fcba03")
         plt.savefig("/home/diana-dtx/Desktop/Master_Thesis/train_accuracy_plot.PNG")
 
         # Evaluate on clean data
@@ -142,15 +155,7 @@ class Ataque:
         # We use tf for evaluation on adversarial data
         sess = tf.compat.v1.Session()
         tf.compat.v1.disable_eager_execution()
-        x_op = tf.compat.v1.placeholder(
-            tf.float32,
-            shape=(
-                16,
-                3,
-                64,
-                64,
-            ),
-        )
+        x_op = tf.compat.v1.placeholder(tf.float32, shape=(16, 3, 64, 64,),)
 
         # Convert pytorch model to a tf_model and wrap it in cleverhans
         tf_model_fn = convert_pytorch_model_to_tf(model)
@@ -166,11 +171,11 @@ class Ataque:
         total = 0
         correct = 0
         for xs, ys in val_loader:
-            adv_preds_op = tf.compat.v1.placeholder(tf.float32, [None, 2, 2, 1], name='x-input')
+            adv_preds_op = tf.compat.v1.placeholder(tf.float32, [None, 2, 2, 1], name="x-input")
             reshaped_x_op = tf.reshape(adv_preds_op, [-1, 4])
             with tf.compat.v1.Session() as sess:
                 x = [[[[16], [3]], [[64], [64]]]]
-                #print(sess.run(reshaped_x_op, feed_dict={adv_preds_op: x}))
+                # print(sess.run(reshaped_x_op, feed_dict={adv_preds_op: x}))
                 adv_preds = sess.run(reshaped_x_op, feed_dict={adv_preds_op: x})
                 correct += (np.argmax(adv_preds, axis=1) == ys.cpu().detach().numpy()).sum()
                 total += val_loader.batch_size
@@ -181,17 +186,18 @@ class Ataque:
         return report
 
 
-if __name__ == '__main__':
-    path= 'models/Demo/LOGS/models/nnet_epoch_9.pt'
-    model={}
-    train=None
-    train_dl=None
-    test_dl=None
-    
-    
+if __name__ == "__main__":
+    path = "models/Demo/LOGS/models/nnet_epoch_9.pt"
+    model = {}
+    train = None
+    train_dl = None
+    test_dl = None
+
+    # Let's start the engine environment
+    set_module_import()
+    json_confs = get_configs()
+
     ataque = Ataque(model, path)
-    ataque.load_model(model, path)
+    ataque.load_model(json_confs)
     train_dl, test_dl = ataque.load_epoch(model)
-
-
 
