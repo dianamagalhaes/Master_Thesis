@@ -35,6 +35,8 @@ from torch_ava.torch_utils import TensorboardLoggerOperator, ModelOperator
 from torch_ava.engine.trainer import Trainer
 
 torch.cuda.empty_cache()
+
+
 def set_module_import(model_name: str):
     """This utility function imports the model folder as an additional module of this script.
     Allowing it to gather all the necessary information for train/val/test and also to attack the model.
@@ -65,7 +67,7 @@ def get_model_configs(json_file_path: str) -> dict:
 
 class Ataque:
 
-    adversarial_atacks = {
+    adversarial_attacks = {
         "Fast Gradient Method": {"call": fast_gradient_method, "kwargs": {"eps": 0.3, "norm": np.inf}},
         "Projected Gradient Descent": {
             "call": projected_gradient_descent,
@@ -170,8 +172,8 @@ class Ataque:
                     y_true.append(labels[i].item())
                     y_pred.append(pred[i].item())
 
-        if attack_name in Ataque.adversarial_atacks:
-            adva_atack = Ataque.adversarial_atacks[attack_name]
+        if attack_name in Ataque.adversarial_attacks:
+            adva_attack = Ataque.adversarial_attacks[attack_name]
 
         else:
             raise ValueError("Please provide a valid and supported Attack")
@@ -179,20 +181,49 @@ class Ataque:
 
         for x, y in torch_loader:
             x, y = x.to(device), y.to(device)
-            x_attacked = adva_atack["call"](
-                model, x, **adva_atack["kwargs"]
+            x_attacked = adva_attack["call"](
+                model, x, **adva_attack["kwargs"]
             )  # fast_gradient_method(model, x, adva_eps, np.inf)
             pred_attacked = model(x_attacked).cpu().data.numpy().argmax(axis=1).tolist()
             y_pred_attacked += pred_attacked
 
         print(
-            "\n Classification Performance on clean samples: \n", classification_report(y_true, y_pred, digits=4),
+            "\n Classification Performance on clean samples: \n",
+            classification_report(y_true, y_pred, digits=4, target_names=self.json_confs["target_labels_name"]),
         )
 
         print(
             f"\n Classification Performance on {attack_name} Adversarial Attack: \n",
-            classification_report(y_true, y_pred_attacked, digits=4),
+            classification_report(
+                y_true, y_pred_attacked, digits=4, target_names=self.json_confs["target_labels_name"]
+            ),
         )
+
+
+def train_exe(ataque, device):
+
+    torch_dset, torch_train_loader, torch_val_loader, _ = ataque.load_dataset()
+
+    model, optim, _ = ataque.set_model_to_train(torch_dset, torch_train_loader=torch_train_loader)
+    ataque.train_model(model, device, torch_train_loader, torch_val_loader, optim, None)
+
+
+def eval_exe(ataque, device):
+
+    _, _, torch_val_loader, torch_test_loader = ataque.load_dataset()
+    # Pipeline for an already trained model
+
+    # We will assume that there is only one best model
+    # Note that the torch models can either be with .pt or .pth extension.
+    # For .pth models, only a dictionary of the weights are store not the whole model!
+    model_weights_path = glob.glob(f"models/{args.model_name}/LOGS/models/best*")[0]
+
+    model = ataque.load_torch_model(model_weights_path)
+    print("\n Validation set Attacked")
+    ataque.eval_attack(model, "Fast Gradient Method", torch_val_loader, device=device)
+
+    print("\n Test set Attacked")
+    ataque.eval_attack(model, "Fast Gradient Method", torch_test_loader, device=device)
 
 
 if __name__ == "__main__":
@@ -223,9 +254,15 @@ if __name__ == "__main__":
         help="Device that will execute the script. Defaults to CPU if not specified, "
         "if the user provides a gpu id and there is None available.",
     )
-    args = parser.parse_args()
+    subparsers = parser.add_subparsers()
 
-    # model_name = "MedNIST_Dense121_MONAI"
+    train_routine = subparsers.add_parser("train", help="Train DL model")
+    train_routine.set_defaults(func=train_exe)
+
+    eval_routine = subparsers.add_parser("eval", help="Evaluation and Adversarial Attack")
+    eval_routine.set_defaults(func=eval_exe)
+
+    args = parser.parse_args()
 
     # Let's start the engine environment
     set_module_import(args.model_name)
@@ -237,18 +274,6 @@ if __name__ == "__main__":
     model_configs = get_model_configs(model_configs_path)
 
     ataque = Ataque(json_confs=model_configs)
-    torch_dset, torch_train_loader, torch_val_loader, torch_test_loader = ataque.load_dataset()
 
-   # model, optim, _ = ataque.set_model_to_train(torch_dset, torch_train_loader=torch_train_loader)
-   # ataque.train_model(model, args.device, torch_train_loader, torch_val_loader, optim, None)
-
-    # Pipeline for an already trained model
-
-    # We will assume that there is only one best model
-    # Note that the torch models can either be with .pt or .pth extension.
-    # For .pth models, only a dictionary of the weights are store not the whole model!
-    model_weights_path = glob.glob(f"models/{args.model_name}/LOGS/models/best*")[0]
-
-    model = ataque.load_torch_model(model_weights_path)
-    ataque.eval_attack(model, "Carlini Wagner L2", torch_val_loader, device=args.device)
+    args.func(ataque, args.device)
 

@@ -1,5 +1,13 @@
 {
-  "train": {
+    "target_labels_name": [
+        "AbdomenCT",
+        "BreastMRI",
+        "ChestCT",
+        "CXR",
+        "Hand",
+        "HeadCT"
+    ],
+    "train": {
         "batch_size": 300,
         "epochs": 5,
         "transformations": {

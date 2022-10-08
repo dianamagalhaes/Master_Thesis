@@ -10,7 +10,7 @@ class Network(nn.Module):
     def __init__(self, inpt_dims):
         super(Network, self).__init__()
 
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=12, kernel_size=5, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=12, kernel_size=5, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(12)
         self.conv2 = nn.Conv2d(in_channels=12, out_channels=12, kernel_size=5, stride=1, padding=1)
         self.bn2 = nn.BatchNorm2d(12)
@@ -27,7 +27,7 @@ class Network(nn.Module):
         dummy_data = torch.ones([batch_size, chanels, w, h])
         self.img_h, self.img_w = self.pipeline(dummy_data).shape[-2], self.pipeline(dummy_data).shape[-1]
 
-        self.fc1 = nn.Linear(24 * self.img_h * self.img_w, 10)
+        self.fc1 = nn.Linear(24 * self.img_h * self.img_w, 6)
 
     def forward(self, input):
         output = F.relu(self.bn1(self.conv1(input)))
