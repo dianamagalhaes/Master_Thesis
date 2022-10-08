@@ -32,7 +32,7 @@
         }
     },
     "val": {
-        "batch_size": 16,
+        "batch_size": 512,
         "transformations": {
             "Grayscale": {},
             "ToNumpy": {},
@@ -40,7 +40,7 @@
         }
     },
     "test": {
-        "batch_size": 1,
+        "batch_size": 512,
         "transformations": {
             "Grayscale": {},
             "ToNumpy": {},
