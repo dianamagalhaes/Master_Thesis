@@ -1,17 +1,12 @@
-from cgi import test
 import json
-import statistics
-from easydict import EasyDict
-import joblib
 import os
 import importlib
 import sys
 import glob
 import argparse
 
-
+import pandas as pd
 import numpy as np
-import time
 
 
 import torch
@@ -68,14 +63,14 @@ def get_model_configs(json_file_path: str) -> dict:
 class Ataque:
 
     adversarial_attacks = {
-        "Fast Gradient Method": {"call": fast_gradient_method, "kwargs": {"eps": 0.3, "norm": np.inf}},
-        "Projected Gradient Descent": {
+        "Fast_Gradient_Method": {"call": fast_gradient_method, "kwargs": {"eps": 0.3, "norm": np.inf}},
+        "Projected_Gradient_Descent": {
             "call": projected_gradient_descent,
             "kwargs": {"eps": 0.3, "eps_iter": 0.01, "nb_iter": 40, "norm": np.inf},
         },
-        "Sparse L1 Descent": {"call": sparse_l1_descent, "kwargs": {}},
-        "Carlini Wagner L2": {"call": carlini_wagner_l2, "kwargs": {"n_classes": 6}},
-        "Hop Skip Jump": {"call": hop_skip_jump_attack, "kwargs": {"norm": np.inf}},
+        "Sparse_L1_Descent": {"call": sparse_l1_descent, "kwargs": {}},
+        "Carlini_Wagner_L2": {"call": carlini_wagner_l2, "kwargs": {"n_classes": 6}},
+        "Hop_Skip_Jump": {"call": hop_skip_jump_attack, "kwargs": {"norm": np.inf}},
     }
 
     def __init__(self, json_confs: dict, dataset_path: str = "./MedNIST/"):
@@ -150,7 +145,9 @@ class Ataque:
         trainer_operator = Trainer(model_operator, logger, epochs=self.json_confs["train"]["epochs"])
         trainer_operator.run_epochs(model, torch_train_loader, torch_val_loader, scheduler)
 
-    def eval_attack(self, model: object, attack_name: str, torch_loader: object, device: str):
+    def eval_attack(
+        self, model_name: str, model: object, attack_name: str, torch_loader: object, set: str, device: str
+    ):
         # Evaluate on clean and adversarial data
 
         model_operator = ModelOperator(device=device)
@@ -187,17 +184,21 @@ class Ataque:
             pred_attacked = model(x_attacked).cpu().data.numpy().argmax(axis=1).tolist()
             y_pred_attacked += pred_attacked
 
-        print(
-            "\n Classification Performance on clean samples: \n",
-            classification_report(y_true, y_pred, digits=4, target_names=self.json_confs["target_labels_name"]),
-        )
+        os.makedirs(f"models/{model_name}/LOGS/Results/", exist_ok=True)
 
-        print(
-            f"\n Classification Performance on {attack_name} Adversarial Attack: \n",
-            classification_report(
-                y_true, y_pred_attacked, digits=4, target_names=self.json_confs["target_labels_name"]
-            ),
+        if not os.path.isfile(f"models/{model_name}/LOGS/Results/clean_samples.csv"):
+            report = classification_report(
+                y_true, y_pred, digits=4, target_names=self.json_confs["target_labels_name"], output_dict=True
+            )
+            df = pd.DataFrame(report).transpose()
+            df.to_csv(f"models/{model_name}/LOGS/Results/clean_samples.csv")
+
+        attack_report = classification_report(
+            y_true, y_pred_attacked, digits=4, target_names=self.json_confs["target_labels_name"], output_dict=True
         )
+        attack_acro = attack_name.replace(" ", "").lower()
+        df = pd.DataFrame(attack_report).transpose()
+        df.to_csv(f"models/{model_name}/LOGS/Results/{attack_acro}_attacked_{set}_samples.csv")
 
 
 def train_exe(ataque, device):
@@ -208,7 +209,7 @@ def train_exe(ataque, device):
     ataque.train_model(model, device, torch_train_loader, torch_val_loader, optim, None)
 
 
-def eval_exe(ataque, device):
+def eval_exe(ataque, device, attack_name):
 
     _, _, torch_val_loader, torch_test_loader = ataque.load_dataset()
     # Pipeline for an already trained model
@@ -220,10 +221,10 @@ def eval_exe(ataque, device):
 
     model = ataque.load_torch_model(model_weights_path)
     print("\n Validation set Attacked")
-    ataque.eval_attack(model, "Fast Gradient Method", torch_val_loader, device=device)
+    ataque.eval_attack(args.model_name, model, attack_name, torch_val_loader, set="val", device=device)
 
     print("\n Test set Attacked")
-    ataque.eval_attack(model, "Fast Gradient Method", torch_test_loader, device=device)
+    ataque.eval_attack(args.model_name, model, attack_name, torch_test_loader, set="test", device=device)
 
 
 if __name__ == "__main__":
@@ -260,6 +261,19 @@ if __name__ == "__main__":
     train_routine.set_defaults(func=train_exe)
 
     eval_routine = subparsers.add_parser("eval", help="Evaluation and Adversarial Attack")
+    eval_routine.add_argument(
+        "--attack_name",
+        required=True,
+        type=str,
+        help="Name of the Adversarial Attack",
+        choices=[
+            "Fast_Gradient_Method",
+            "Projected_Gradient_Descent",
+            "Sparse_L1_Descent",
+            "Carlini_Wagner_L2",
+            "Hop_Skip_Jump",
+        ],
+    )
     eval_routine.set_defaults(func=eval_exe)
 
     args = parser.parse_args()
@@ -275,5 +289,4 @@ if __name__ == "__main__":
 
     ataque = Ataque(json_confs=model_configs)
 
-    args.func(ataque, args.device)
-
+    args.func(ataque, args.device, args.attack_name)
