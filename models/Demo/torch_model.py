@@ -35,9 +35,7 @@ class Network(nn.Module):
         output = self.pool(output)
         output = F.relu(self.bn4(self.conv4(output)))
         output = F.relu(self.bn5(self.conv5(output)))
-        print(output.shape)
         output = output.view(-1, 24 * self.img_h * self.img_w)
-        print(output.shape)
         output = self.fc1(output)
 
         return output
