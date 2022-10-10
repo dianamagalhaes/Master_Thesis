@@ -1,6 +1,5 @@
 import os
 import torch
-from typing import Literal, Union
 from torch.utils.tensorboard import SummaryWriter
 
 from torch_ava.utils import create_dir_recursively
@@ -54,7 +53,7 @@ class TensorboardLoggerOperator:
 
 
 class ModelOperator:
-    def __init__(self, device: Literal["cuda", "cpu"]) -> None:
+    def __init__(self, device) -> None:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 
         cuda_devices = torch.cuda.device_count()

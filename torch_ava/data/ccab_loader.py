@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import pydicom as pyd
-import torch
 from torch.utils.data import Dataset
 
 # Custom libraries
