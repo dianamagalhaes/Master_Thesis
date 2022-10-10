@@ -37,12 +37,13 @@ class CCAB_Dataset(Dataset):
     def __getitem__(self, index: int):
 
         x = pyd.dcmread(f"{os.path.join(self.dset_base_dir, self.dataset[index])}.dcm").pixel_array
-        x.astype(np.float32)
+        x = x.astype(np.float32)
 
         if self.transform:
             x = self.transform(x)
 
         y = self.class_to_idx[self.y[index]]
+        y = y.astype(np.uint8)
         return x, y
 
 
