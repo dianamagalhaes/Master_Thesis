@@ -43,7 +43,7 @@ class CCAB_Dataset(Dataset):
             x = self.transform(x)
 
         y = self.class_to_idx[self.y[index]]
-        y = y.astype(np.uint8)
+
         return x, y
 
 
