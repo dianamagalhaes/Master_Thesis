@@ -33,7 +33,7 @@ dependencies:
     - dm-tree==0.1.7
     - easydict==1.10
     - fonttools==4.37.4
-    - gast==0.5.3
+    - gast==0.2.2
     - google-pasta==0.2.0
     - grpcio==1.49.1
     - h5py==2.10.0
