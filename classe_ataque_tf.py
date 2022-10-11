@@ -197,5 +197,5 @@ if __name__ == "__main__":
     model_weights_path = glob.glob(f"models/{args.model_name}/LOGS/models/*")[0]
     model = ataque.load_tf_model(model_weights_path)
 
-    ataque.eval_attack(model, "Fast_Gradient_Method", torch_loader, device=args.device)
+    ataque.eval_attack("SA_Classification_AI4MED", model, "Fast_Gradient_Method", torch_loader, device=args.device)
 
