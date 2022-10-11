@@ -36,9 +36,6 @@ class CCAB_Dataset(Dataset):
 
     def __getitem__(self, index: int):
 
-        # import pdb
-
-        # pdb.set_trace()
         x = pyd.dcmread(f"{os.path.join(self.dset_base_dir, self.dataset[index])}.dcm").pixel_array
         x = x[:, :, np.newaxis].astype(np.float32)
 
