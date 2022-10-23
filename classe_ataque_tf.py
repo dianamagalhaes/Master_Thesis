@@ -63,7 +63,7 @@ class Ataque:
     adversarial_attacks = {
         "Fast_Gradient_Method": {
             "call": fast_gradient_method,
-            "kwargs": {"eps": 0.3, "clip_min": 0.0, "clip_max": 1.0},
+            "kwargs": {"eps": 0.3, "norm": np.inf},
         },
         # "Projected_Gradient_Descent": {
         #     "call": projected_gradient_descent,
