@@ -4,29 +4,30 @@ import importlib
 import json
 import os
 import pandas as pd
+import platform
+from tqdm import tqdm
 import numpy as np
 import sys
 
 # DL libraries
 import torch
-from torch.utils.data.sampler import SubsetRandomSampler
+import tensorflow as tf
 from tensorflow.keras.models import load_model
+from tensorflow.python.keras.backend import set_session
+from tensorflow.python.keras.models import load_model
+
+# Set TF random seed to improve reproducibility
+tf.set_random_seed(1234)
 
 # Classification performance metrics
 from sklearn.metrics import classification_report
 
-# CleverHans Lib v 4.0.0
-from cleverhans.torch.attacks.fast_gradient_method import fast_gradient_method
-from cleverhans.torch.attacks.projected_gradient_descent import projected_gradient_descent
-from cleverhans.torch.attacks.carlini_wagner_l2 import carlini_wagner_l2
-from cleverhans.torch.attacks.sparse_l1_descent import sparse_l1_descent
-from cleverhans.torch.attacks.hop_skip_jump_attack import hop_skip_jump_attack
+# CleverHans Lib v 3.1.0
+from cleverhans.tf2.attacks.projected_gradient_descent import projected_gradient_descent
+from cleverhans.tf2.attacks.fast_gradient_method import fast_gradient_method
 
 # ---
-from torch_ava.data.get_transformations import DataAugOperator
-from torch_ava.data import CCAB_Dataset, LoaderOperator
-from torch_ava.torch_utils import TensorboardLoggerOperator, ModelOperator
-from torch_ava.engine.trainer import Trainer
+from torch_ava.data import CCAB_Dataset
 
 
 def set_module_import(model_name: str):
@@ -60,40 +61,44 @@ def get_model_configs(json_file_path: str) -> dict:
 class Ataque:
 
     adversarial_attacks = {
-        "Fast_Gradient_Method": {"call": fast_gradient_method, "kwargs": {"eps": 0.3, "norm": np.inf}},
-        "Projected_Gradient_Descent": {
-            "call": projected_gradient_descent,
-            "kwargs": {"eps": 0.3, "eps_iter": 0.01, "nb_iter": 40, "norm": np.inf},
+        "Fast_Gradient_Method": {
+            "call": fast_gradient_method,
+            "kwargs": {"eps": 0.3, "clip_min": 0.0, "clip_max": 1.0},
         },
-        "Sparse_L1_Descent": {"call": sparse_l1_descent, "kwargs": {}},
-        "Carlini_Wagner_L2": {"call": carlini_wagner_l2, "kwargs": {"n_classes": 6}},
-        "Hop_Skip_Jump": {"call": hop_skip_jump_attack, "kwargs": {"norm": np.inf}},
+        # "Projected_Gradient_Descent": {
+        #     "call": projected_gradient_descent,
+        #     "kwargs": {"eps": 0.3, "eps_iter": 0.01, "nb_iter": 40, "norm": np.inf},
+        # },
+        # "Sparse_L1_Descent": {"call": sparse_l1_descent, "kwargs": {}},
+        # "Carlini_Wagner_L2": {"call": carlini_wagner_l2, "kwargs": {"n_classes": 6}},
+        # "Hop_Skip_Jump": {"call": hop_skip_jump_attack, "kwargs": {"norm": np.inf}},
     }
 
     def __init__(
-        self, json_confs: dict,
+        self,
+        json_confs: dict,
     ):
 
         self.json_confs = json_confs
 
-    @staticmethod
-    def get_dataset_loader(cardiomr_base_dir: str, dataframe_path: str):
+        self.session = tf.compat.v1.Session()
+        self.graph = tf.get_default_graph()
+
+    def get_dataset_loader(self, cardiomr_base_dir: str, dataframe_path: str):
 
         torch_dset = CCAB_Dataset(cardiomr_base_dir=cardiomr_base_dir, dataframe_path=dataframe_path)
-        print("Numpy image array", torch_dset.__getitem__(0)[0], "\n Class Index", torch_dset.__getitem__(0)[1])
-
-        total_samples = len(torch_dset)
-        idx = list(range(total_samples))
-        sampler = SubsetRandomSampler(idx)
 
         torch_loader = torch.utils.data.DataLoader(
-            torch_dset, batch_size=1, sampler=sampler, num_workers=2, pin_memory=False,
+            torch_dset,
+            batch_size=self.json_confs["test"]["batch_size"],
+            shuffle=False,
         )
 
         return torch_loader
 
     def load_tf_model(self, model_weights_path: str):
 
+        set_session(self.session)
         model = load_model(model_weights_path)
         print("Model successfully load!")
 
@@ -101,21 +106,19 @@ class Ataque:
 
         return model
 
-    def eval_attack(self, model_name: str, model: object, attack_name: str, torch_loader: object, device: str):
-        # Evaluate on clean and adversarial data
+    def eval_clean_samples(self, model_name: str, model: object, torch_loader: object):
+        # Evaluate on clean data
+        y_true, y_pred = [], []
 
-        y_true = []
-        y_pred, y_pred_attacked = [], []
-        os.makedirs(f"models/{model_name}/LOGS/Results/", exist_ok=True)
+        with tqdm(torch_loader, unit="batch") as prog_torch_loader:
+            for x, y in prog_torch_loader:
+                x = x.cpu().detach().numpy()
+                y = y.cpu().detach().numpy()
 
-        if not os.path.isfile(f"models/{model_name}/LOGS/Results/clean_samples.csv"):
+                pred = model.predict(x, verbose=0).argmax(1).tolist()
 
-            for x, y in torch_loader:
-
-                pred = model.predict(x).argmax(1)
-                for i in range(len(pred)):
-                    y_true.append(y[i].item())
-                    y_pred.append(pred[i])
+                y_true += y.tolist()
+                y_pred += pred
 
             report = classification_report(
                 y_true, y_pred, digits=4, target_names=self.json_confs["target_labels_name"], output_dict=True
@@ -123,18 +126,47 @@ class Ataque:
             df = pd.DataFrame(report).transpose()
             df.to_csv(f"models/{model_name}/LOGS/Results/clean_samples.csv")
 
-        if attack_name in Ataque.adversarial_atacks:
-            adva_attack = Ataque.adversarial_atacks[attack_name]
+    def eval_attack(self, model_name: str, model: object, attack_name: str, torch_loader: object):
+
+        y_true, y_pred_attacked = [], []
+        nbclasses = 5
+
+        if attack_name in Ataque.adversarial_attacks:
+            adva_attack = Ataque.adversarial_attacks[attack_name]
 
         else:
             raise ValueError("Please provide a valid and supported Attack")
 
-        for x, y in torch_loader:
-            x, y = x.to(device), y.to(device)
-            x_attacked = adva_attack["call"](model, x, **adva_attack["kwargs"])
+        with tqdm(torch_loader, unit="batch") as prog_torch_loader:
+            for x_test, y_test in prog_torch_loader:
+                x_test = x_test.cpu().detach().numpy().astype(np.float32)
+                y_test = y_test.cpu().detach().numpy()
 
-            pred_attacked = model.predict(x_attacked).argmax(1).tolist()
-            y_pred_attacked += pred_attacked
+                y_test_ohe = np.zeros((y_test.size, nbclasses))
+                y_test_ohe[np.arange(y_test.size), y_test] = 1
+
+                # _, img_rows, img_cols, nchannels = x_test.shape
+                # x = tf.placeholder(tf.float32, shape=(None, img_rows, img_cols, nchannels))
+                # y = tf.placeholder(tf.float32, shape=(None, nbclasses))
+
+                # adva_model = adva_attack["call"](model, sess=sess)
+                # adv_x = adva_model.generate(x, **adva_attack["kwargs"])
+                adv_x = adva_attack["call"](model, x_test, **adva_attack["kwargs"])
+                with self.session.as_default():
+                    with self.graph.as_default():
+                        adv_x = adv_x.eval()
+                import pdb
+
+                pdb.set_trace()
+                pred_attacked = model.predict(adv_x)
+
+                # eval_params = {"batch_size": x_test.shape[0]}
+                # acc = model_eval(sess, x, y, preds_adv, x_test, y_test_ohe, args=eval_params)
+                import pdb
+
+                pdb.set_trace()
+                y_pred_attacked += pred_attacked
+                y_true += y.tolist()
 
         attack_report = classification_report(
             y_true, y_pred_attacked, digits=4, target_names=self.json_confs["target_labels_name"], output_dict=True
@@ -155,6 +187,13 @@ if __name__ == "__main__":
     cuda_devices = torch.cuda.device_count()
     cuda_codenames = [f"cuda:{idx}" for idx in range(cuda_devices)]
 
+    # Overall configs
+
+    if platform.node() == "nea138-lt":
+        cardiomr_base_dir = "/home/apinto/Documents/repos/cardiomr_dl/"
+    else:
+        cardiomr_base_dir = "/mnt/SSD_Storage/ai4cmr/cardiomr_dl/"
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-m",
@@ -172,6 +211,22 @@ if __name__ == "__main__":
         help="Device that will execute the script. Defaults to CPU if not specified, "
         "if the user provides a gpu id and there is None available.",
     )
+
+    parser.add_argument(
+        "--attack_name",
+        required=True,
+        type=str,
+        help="Name of the Adversarial Attack",
+        choices=[
+            "None",
+            "Fast_Gradient_Method",
+            "Projected_Gradient_Descent",
+            "Sparse_L1_Descent",
+            "Carlini_Wagner_L2",
+            "Hop_Skip_Jump",
+        ],
+    )
+
     args = parser.parse_args()
 
     # Let's start the engine environment
@@ -182,14 +237,13 @@ if __name__ == "__main__":
 
     model_configs_path = os.path.abspath(os.path.join(pckg_confs["MODELS_DIR"], f"{args.model_name}/configs.json"))
     model_configs = get_model_configs(model_configs_path)
+    os.makedirs(f"models/{args.model_name}/LOGS/Results/", exist_ok=True)
 
     ataque = Ataque(json_confs=model_configs)
 
-    cardiomr_base_dir = "/mnt/SSD_Storage/ai4cmr/cardiomr_dl/"
     dataframe_path = os.path.abspath(
         os.path.join(pckg_confs["MODELS_DIR"], "SA_Classification_AI4MED/EXTRA_DETAILS/test_dataframe.csv")
     )
-
     torch_loader = ataque.get_dataset_loader(cardiomr_base_dir, dataframe_path)
 
     # Pipeline for an already trained model
@@ -197,5 +251,8 @@ if __name__ == "__main__":
     model_weights_path = glob.glob(f"models/{args.model_name}/LOGS/models/*")[0]
     model = ataque.load_tf_model(model_weights_path)
 
-    ataque.eval_attack("SA_Classification_AI4MED", model, "Fast_Gradient_Method", torch_loader, device=args.device)
+    if args.attack_name == "None":
 
+        ataque.eval_clean_samples("SA_Classification_AI4MED", model, torch_loader)
+    else:
+        ataque.eval_attack("SA_Classification_AI4MED", model, "Fast_Gradient_Method", torch_loader)
