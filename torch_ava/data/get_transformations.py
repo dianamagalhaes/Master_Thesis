@@ -49,12 +49,20 @@ class DataAugOperator:
         return ToNumpy()
 
     @staticmethod
+    def get_CenterCrop(size):
+        return transforms.CenterCrop(size=size)
+
+    @staticmethod
     def get_AddChannel():
         return AddChannel()
 
     @staticmethod
     def get_ScaleIntensity():
         return ScaleIntensity()
+
+    @staticmethod
+    def get_ToTensor():
+        return transforms.ToTensor()
 
     @staticmethod
     def get_EnsureType():
@@ -67,7 +75,7 @@ class DataAugOperator:
             data_trfrms = operator(**transform_details)
             self.transformations.transforms.append(data_trfrms)
 
-        self.transformations.transforms.append(transforms.ToTensor())
+        self.transformations.transforms.append(getattr(self, "get_ToTensor")())
 
     def get_pipeline(self):
         return self.transformations
