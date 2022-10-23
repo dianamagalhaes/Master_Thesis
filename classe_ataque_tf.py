@@ -81,6 +81,9 @@ class Ataque:
 
         self.json_confs = json_confs
 
+        # Force TensorFlow to use single thread to improve reproducibility
+        config = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+
         self.session = tf.compat.v1.Session()
         self.graph = tf.get_default_graph()
 
@@ -137,36 +140,35 @@ class Ataque:
         else:
             raise ValueError("Please provide a valid and supported Attack")
 
+        from PIL import Image
+        import cv2
+
         with tqdm(torch_loader, unit="batch") as prog_torch_loader:
             for x_test, y_test in prog_torch_loader:
-                x_test = x_test.cpu().detach().numpy().astype(np.float32)
+                x_test = x_test.cpu().detach().numpy()  # .astype(np.float32)
                 y_test = y_test.cpu().detach().numpy()
 
-                y_test_ohe = np.zeros((y_test.size, nbclasses))
-                y_test_ohe[np.arange(y_test.size), y_test] = 1
+                # image_array = cv2.normalize(x_test[0, :, :, 0], None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+                # im = Image.fromarray(image_array)
+                # im.save("input.png")
 
-                # _, img_rows, img_cols, nchannels = x_test.shape
-                # x = tf.placeholder(tf.float32, shape=(None, img_rows, img_cols, nchannels))
-                # y = tf.placeholder(tf.float32, shape=(None, nbclasses))
-
-                # adva_model = adva_attack["call"](model, sess=sess)
-                # adv_x = adva_model.generate(x, **adva_attack["kwargs"])
+                set_session(self.session)
                 adv_x = adva_attack["call"](model, x_test, **adva_attack["kwargs"])
+
                 with self.session.as_default():
-                    with self.graph.as_default():
-                        adv_x = adv_x.eval()
-                import pdb
+                    adv_x_numpy = adv_x.eval()
 
-                pdb.set_trace()
-                pred_attacked = model.predict(adv_x)
+                # adv_img = cv2.normalize(adv_x_numpy[0, :, :, 0], None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+                # adv_im = Image.fromarray(adv_img)
+                # adv_im.save("result.png")
 
-                # eval_params = {"batch_size": x_test.shape[0]}
-                # acc = model_eval(sess, x, y, preds_adv, x_test, y_test_ohe, args=eval_params)
-                import pdb
+                # print("Original == Adversarial?", (adv_x_numpy[0, :, :, 0] == x_test[0, :, :, 0]).all())
 
-                pdb.set_trace()
+                set_session(self.session)
+                pred_attacked = model.predict(adv_x_numpy, verbose=0).argmax(1).tolist()
+
                 y_pred_attacked += pred_attacked
-                y_true += y.tolist()
+                y_true += y_test.tolist()
 
         attack_report = classification_report(
             y_true, y_pred_attacked, digits=4, target_names=self.json_confs["target_labels_name"], output_dict=True
