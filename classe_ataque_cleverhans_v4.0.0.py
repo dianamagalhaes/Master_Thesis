@@ -145,53 +145,55 @@ class Ataque:
         trainer_operator = Trainer(model_operator, logger, epochs=self.json_confs["train"]["epochs"])
         trainer_operator.run_epochs(model, torch_train_loader, torch_val_loader, scheduler)
 
-    def eval_attack(
-        self, model_name: str, model: object, attack_name: str, torch_loader: object, set: str, device: str
-    ):
-        # Evaluate on clean and adversarial data
-
+    def eval_clean_samples(self, model_name: str, model: object, torch_loader: object, set: str, device: str):
         model_operator = ModelOperator(device=device)
         device = model_operator.get_device()
         model.to(device)
         model.eval()
 
-        y_true = []
-        y_pred = []
+        y_true, y_pred = [], []
         with torch.no_grad():
-            for x_val, y_val in torch_loader:
-                data, labels = (
-                    x_val.to(device),
-                    y_val.to(device),
+            for x, y in torch_loader:
+
+                x, y = (
+                    x.to(device),
+                    y.to(device),
                 )
 
-                pred = model(data).argmax(dim=1)
+                pred = model(x).argmax(dim=1)
                 for i in range(len(pred)):
-                    y_true.append(labels[i].item())
+                    y_true.append(y[i].item())
                     y_pred.append(pred[i].item())
 
+            report = classification_report(
+                y_true, y_pred, digits=4, target_names=self.json_confs["target_labels_name"], output_dict=True
+            )
+            df = pd.DataFrame(report).transpose()
+            df.to_csv(f"models/{model_name}/LOGS/Results/{set}_clean_samples.csv")
+
+    def eval_attack(
+        self, model_name: str, model: object, attack_name: str, torch_loader: object, set: str, device: str
+    ):
+        model_operator = ModelOperator(device=device)
+        device = model_operator.get_device()
+        model.to(device)
+        model.eval()
+
+        # --- Adversarial Attack
         if attack_name in Ataque.adversarial_attacks:
             adva_attack = Ataque.adversarial_attacks[attack_name]
 
         else:
             raise ValueError("Please provide a valid and supported Attack")
-        y_pred_attacked = []
 
+        y_true, y_pred_attacked = [], []
         for x, y in torch_loader:
             x, y = x.to(device), y.to(device)
-            x_attacked = adva_attack["call"](
-                model, x, **adva_attack["kwargs"]
-            )  # fast_gradient_method(model, x, adva_eps, np.inf)
+
+            x_attacked = adva_attack["call"](model, x, **adva_attack["kwargs"])
             pred_attacked = model(x_attacked).cpu().data.numpy().argmax(axis=1).tolist()
             y_pred_attacked += pred_attacked
-
-        os.makedirs(f"models/{model_name}/LOGS/Results/", exist_ok=True)
-
-        if not os.path.isfile(f"models/{model_name}/LOGS/Results/clean_samples.csv"):
-            report = classification_report(
-                y_true, y_pred, digits=4, target_names=self.json_confs["target_labels_name"], output_dict=True
-            )
-            df = pd.DataFrame(report).transpose()
-            df.to_csv(f"models/{model_name}/LOGS/Results/clean_samples.csv")
+            y_true += y.cpu().data.numpy().tolist()
 
         attack_report = classification_report(
             y_true, y_pred_attacked, digits=4, target_names=self.json_confs["target_labels_name"], output_dict=True
@@ -211,6 +213,7 @@ def train_exe(ataque, device):
 
 def eval_exe(ataque, device, attack_name):
 
+    os.makedirs(f"models/{model_name}/LOGS/Results/", exist_ok=True)
     _, _, torch_val_loader, torch_test_loader = ataque.load_dataset()
     # Pipeline for an already trained model
 
@@ -220,11 +223,19 @@ def eval_exe(ataque, device, attack_name):
     model_weights_path = glob.glob(f"models/{args.model_name}/LOGS/models/best*")[0]
 
     model = ataque.load_torch_model(model_weights_path)
-    print("\n Validation set Attacked")
-    ataque.eval_attack(args.model_name, model, attack_name, torch_val_loader, set="val", device=device)
 
-    print("\n Test set Attacked")
-    ataque.eval_attack(args.model_name, model, attack_name, torch_test_loader, set="test", device=device)
+    if attack_name:
+        print("\n Validation set Attacked")
+        ataque.eval_attack(args.model_name, model, attack_name, torch_val_loader, set="val", device=device)
+
+        print("\n Test set Attacked")
+        ataque.eval_attack(args.model_name, model, attack_name, torch_test_loader, set="test", device=device)
+    else:
+        print("\n Validation set results on clean samples")
+        ataque.eval_clean_samples(args.model_name, model, attack_name, torch_val_loader, set="val", device=device)
+
+        print("\n Test set results on clean samples")
+        ataque.eval_clean_samples(args.model_name, model, attack_name, torch_test_loader, set="test", device=device)
 
 
 if __name__ == "__main__":
@@ -267,6 +278,7 @@ if __name__ == "__main__":
         type=str,
         help="Name of the Adversarial Attack",
         choices=[
+            "None",
             "Fast_Gradient_Method",
             "Projected_Gradient_Descent",
             "Sparse_L1_Descent",
