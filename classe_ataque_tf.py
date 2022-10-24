@@ -12,12 +12,16 @@ import sys
 # DL libraries
 import torch
 import tensorflow as tf
+
+tf.compat.v1.enable_eager_execution()
+
 from tensorflow.keras.models import load_model
 from tensorflow.python.keras.backend import set_session
-from tensorflow.python.keras.models import load_model
 
 # Set TF random seed to improve reproducibility
 tf.set_random_seed(1234)
+# tf.compat.v1.Session()
+
 
 # Classification performance metrics
 from sklearn.metrics import classification_report
@@ -25,6 +29,7 @@ from sklearn.metrics import classification_report
 # CleverHans Lib v 3.1.0
 from cleverhans.tf2.attacks.projected_gradient_descent import projected_gradient_descent
 from cleverhans.tf2.attacks.fast_gradient_method import fast_gradient_method
+from cleverhans.tf2.attacks.carlini_wagner_l2 import carlini_wagner_l2
 
 # ---
 from torch_ava.data import CCAB_Dataset
@@ -65,13 +70,11 @@ class Ataque:
             "call": fast_gradient_method,
             "kwargs": {"eps": 0.3, "norm": np.inf},
         },
-        # "Projected_Gradient_Descent": {
-        #     "call": projected_gradient_descent,
-        #     "kwargs": {"eps": 0.3, "eps_iter": 0.01, "nb_iter": 40, "norm": np.inf},
-        # },
-        # "Sparse_L1_Descent": {"call": sparse_l1_descent, "kwargs": {}},
-        # "Carlini_Wagner_L2": {"call": carlini_wagner_l2, "kwargs": {"n_classes": 6}},
-        # "Hop_Skip_Jump": {"call": hop_skip_jump_attack, "kwargs": {"norm": np.inf}},
+        "Projected_Gradient_Descent": {
+            "call": projected_gradient_descent,
+            "kwargs": {"eps": 0.3, "eps_iter": 0.01, "nb_iter": 40, "norm": np.inf},
+        },
+        "Carlini_Wagner_L2": {"call": carlini_wagner_l2, "kwargs": {"n_classes": 6}},
     }
 
     def __init__(
@@ -81,10 +84,7 @@ class Ataque:
 
         self.json_confs = json_confs
 
-        # Force TensorFlow to use single thread to improve reproducibility
-        config = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
-
-        self.session = tf.compat.v1.Session()
+        # self.session = tf.compat.v1.Session()
         self.graph = tf.get_default_graph()
 
     def get_dataset_loader(self, cardiomr_base_dir: str, dataframe_path: str):
@@ -101,7 +101,7 @@ class Ataque:
 
     def load_tf_model(self, model_weights_path: str):
 
-        set_session(self.session)
+        # set_session(self.session)
         model = load_model(model_weights_path)
         print("Model successfully load!")
 
@@ -115,7 +115,7 @@ class Ataque:
 
         with tqdm(torch_loader, unit="batch") as prog_torch_loader:
             for x, y in prog_torch_loader:
-                x = x.cpu().detach().numpy()
+                x = x.cpu().detach().numpy().astype(np.float32)
                 y = y.cpu().detach().numpy()
 
                 pred = model.predict(x, verbose=0).argmax(1).tolist()
@@ -132,7 +132,6 @@ class Ataque:
     def eval_attack(self, model_name: str, model: object, attack_name: str, torch_loader: object):
 
         y_true, y_pred_attacked = [], []
-        nbclasses = 5
 
         if attack_name in Ataque.adversarial_attacks:
             adva_attack = Ataque.adversarial_attacks[attack_name]
@@ -145,18 +144,15 @@ class Ataque:
 
         with tqdm(torch_loader, unit="batch") as prog_torch_loader:
             for x_test, y_test in prog_torch_loader:
-                x_test = x_test.cpu().detach().numpy()  # .astype(np.float32)
+                x_test = x_test.cpu().detach().numpy().astype(np.float32)
                 y_test = y_test.cpu().detach().numpy()
 
                 # image_array = cv2.normalize(x_test[0, :, :, 0], None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
                 # im = Image.fromarray(image_array)
                 # im.save("input.png")
 
-                set_session(self.session)
                 adv_x = adva_attack["call"](model, x_test, **adva_attack["kwargs"])
-
-                with self.session.as_default():
-                    adv_x_numpy = adv_x.eval()
+                adv_x_numpy = adv_x.numpy()
 
                 # adv_img = cv2.normalize(adv_x_numpy[0, :, :, 0], None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
                 # adv_im = Image.fromarray(adv_img)
@@ -164,7 +160,6 @@ class Ataque:
 
                 # print("Original == Adversarial?", (adv_x_numpy[0, :, :, 0] == x_test[0, :, :, 0]).all())
 
-                set_session(self.session)
                 pred_attacked = model.predict(adv_x_numpy, verbose=0).argmax(1).tolist()
 
                 y_pred_attacked += pred_attacked
@@ -175,7 +170,7 @@ class Ataque:
         )
         attack_acro = attack_name.replace(" ", "").lower()
         df = pd.DataFrame(attack_report).transpose()
-        df.to_csv(f"models/{model_name}/LOGS/Results/{attack_acro}_attacked_{set}_samples.csv")
+        df.to_csv(f"models/{model_name}/LOGS/Results/{attack_acro}_attacked_test_samples.csv")
 
 
 if __name__ == "__main__":
