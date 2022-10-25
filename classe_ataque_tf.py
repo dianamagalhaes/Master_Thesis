@@ -73,7 +73,7 @@ class Ataque:
             "call": projected_gradient_descent,
             "kwargs": {"eps": 0.3, "eps_iter": 0.01, "nb_iter": 40, "norm": np.inf},
         },
-        "Carlini_Wagner_L2": {"call": carlini_wagner_l2, "kwargs": {}},
+        "Carlini_Wagner_L2": {"call": carlini_wagner_l2, "kwargs": {"clip_max": None}},
     }
 
     def __init__(
