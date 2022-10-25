@@ -150,10 +150,11 @@ class Ataque:
                 # im = Image.fromarray(image_array)
                 # im.save("input.png")
 
+                if attack_name == "Carlini_Wagner_L2":
+                    x_test = cv2.normalize(x_test, None, 0, 1, cv2.NORM_MINMAX, cv2.CV_32FC4)
+
                 adv_x = adva_attack["call"](model, x_test, **adva_attack["kwargs"])
                 adv_x_numpy = adv_x.numpy()
-                if attack_name == "Carlini_Wagner_L2":
-                    adv_x_numpy = cv2.normalize(adv_x_numpy, None, 0, 1, cv2.NORM_MINMAX, cv2.CV_32FC4)
 
                 # adv_img = cv2.normalize(adv_x_numpy[0, :, :, 0], None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
                 # adv_im = Image.fromarray(adv_img)
