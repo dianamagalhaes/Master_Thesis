@@ -20,13 +20,12 @@ from tensorflow.python.keras.backend import set_session
 
 # Set TF random seed to improve reproducibility
 tf.set_random_seed(1234)
-# tf.compat.v1.Session()
 
 
 # Classification performance metrics
 from sklearn.metrics import classification_report
 
-# CleverHans Lib v 3.1.0
+# CleverHans Lib v 4.0.0
 from cleverhans.tf2.attacks.projected_gradient_descent import projected_gradient_descent
 from cleverhans.tf2.attacks.fast_gradient_method import fast_gradient_method
 from cleverhans.tf2.attacks.carlini_wagner_l2 import carlini_wagner_l2
@@ -74,7 +73,7 @@ class Ataque:
             "call": projected_gradient_descent,
             "kwargs": {"eps": 0.3, "eps_iter": 0.01, "nb_iter": 40, "norm": np.inf},
         },
-        "Carlini_Wagner_L2": {"call": carlini_wagner_l2, "kwargs": {"n_classes": 6}},
+        "Carlini_Wagner_L2": {"call": carlini_wagner_l2, "kwargs": {}},
     }
 
     def __init__(
@@ -249,7 +248,6 @@ if __name__ == "__main__":
     model = ataque.load_tf_model(model_weights_path)
 
     if args.attack_name == "None":
-
         ataque.eval_clean_samples("SA_Classification_AI4MED", model, torch_loader)
     else:
-        ataque.eval_attack("SA_Classification_AI4MED", model, "Fast_Gradient_Method", torch_loader)
+        ataque.eval_attack("SA_Classification_AI4MED", model, args.attack_name, torch_loader)
