@@ -1,0 +1,32 @@
+{
+    "config_file": null,
+    "path_databases": "Database_ccab/",
+    "slice_phase": "all",
+    "run_id": null,
+    "fast_test_mode": false,
+    "data_aug": true,
+    "data_norm": false,
+    "batch_size": 21,
+    "patience": 40,
+    "dropout": 0.1,
+    "regularization_parameter": 0,
+    "test_all": false,
+    "learning_rate": 1e-06,
+    "n_epochs": 1000,
+    "name_train": "",
+    "model": "mobilenet",
+    "activation": "softmax",
+    "pretrained_weights": "imagenet",
+    "nr_classes": 5,
+    "visual_debug": false,
+    "deploy_visual_debug": null,
+    "debug_dir": null,
+    "output_norm": "samples_sum_to_one",
+    "post_processing": "spatial_prob",
+    "deploy_post_processing": "spatial_prob",
+    "use_tta": false,
+    "k_folds": 1,
+    "k_folds_ids": [
+        -1
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "target_labels_name": [
+        "Top",
+        "Basal",
+        "Medial",
+        "Apical",
+        "Bottom"
+    ],
+    "test": {
+        "batch_size": 32
+    }
+}
