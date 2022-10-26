@@ -164,7 +164,7 @@ class Ataque:
                 adv_im = Image.fromarray(adv_img)
                 adv_im.save("result.png")
 
-                # print("Original == Adversarial?", (adv_x_numpy[0, :, :, 0] == x_test[0, :, :, 0]).all())
+                print("Original == Adversarial?", (adv_x_numpy[0, :, :, 0] == x_test[0, :, :, 0]).all())
 
                 pred_attacked = model.predict(adv_x_numpy, verbose=0).argmax(1).tolist()
 
