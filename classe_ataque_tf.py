@@ -146,9 +146,9 @@ class Ataque:
                 x_test = x_test.cpu().detach().numpy().astype(np.float32)
                 y_test = y_test.cpu().detach().numpy()
 
-                # image_array = cv2.normalize(x_test[0, :, :, 0], None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
-                # im = Image.fromarray(image_array)
-                # im.save("input.png")
+                image_array = cv2.normalize(x_test[0, :, :, 0], None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+                im = Image.fromarray(image_array)
+                im.save("input.png")
 
                 if attack_name == "Carlini_Wagner_L2":
                     x_test = cv2.normalize(x_test, None, 0, 1, cv2.NORM_MINMAX, cv2.CV_32FC4)
@@ -160,9 +160,9 @@ class Ataque:
                 except:
                     adv_x_numpy = adv_x
 
-                # adv_img = cv2.normalize(adv_x_numpy[0, :, :, 0], None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
-                # adv_im = Image.fromarray(adv_img)
-                # adv_im.save("result.png")
+                adv_img = cv2.normalize(adv_x_numpy[0, :, :, 0], None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+                adv_im = Image.fromarray(adv_img)
+                adv_im.save("result.png")
 
                 # print("Original == Adversarial?", (adv_x_numpy[0, :, :, 0] == x_test[0, :, :, 0]).all())
 
